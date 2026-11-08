@@ -1,9 +1,10 @@
-import { LoggedSet, WorkoutSession } from '../models/types';
+import { Exercise, LoggedSet, WorkoutSession } from '../models/types';
 
 export interface MainLiftRecord {
   sessionId: string;
   date: string;
   exerciseId: string;
+  exerciseName: string;
   topWeightKg: number;
   topReps: number;
   estimated1RM: number;
@@ -21,11 +22,14 @@ export function estimateOneRepMax(weightKg: number, reps: number): number {
 
 export function extractMainLiftHistory(
   sessions: WorkoutSession[],
-  exerciseId?: string
+  exerciseId?: string,
+  exercises?: Exercise[]
 ): MainLiftRecord[] {
   const records: MainLiftRecord[] = [];
+  const exMap = new Map(exercises?.map((e) => [e.id, e]) ?? []);
 
   for (const session of sessions) {
+    if (session.status !== 'COMPLETED') continue;
     if (exerciseId && session.primaryLiftId !== exerciseId) continue;
 
     const validSets = session.primaryLiftSets.filter(
@@ -50,6 +54,7 @@ export function extractMainLiftHistory(
       sessionId: session.id,
       date: session.date,
       exerciseId: session.primaryLiftId,
+      exerciseName: exMap.get(session.primaryLiftId)?.name ?? session.primaryLiftId,
       topWeightKg: bestSet.weightKg,
       topReps: bestSet.reps,
       estimated1RM: best1RM,
@@ -60,4 +65,16 @@ export function extractMainLiftHistory(
   return records.sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
+}
+
+export function extractCategoryLiftHistory(
+  sessions: WorkoutSession[],
+  category: 'BENCH' | 'SQUAT' | 'DEADLIFT',
+  exercises: Exercise[]
+): MainLiftRecord[] {
+  const matchingIds = new Set(
+    exercises.filter((e) => e.mainLiftCategory === category).map((e) => e.id)
+  );
+  const all = extractMainLiftHistory(sessions, undefined, exercises);
+  return all.filter((r) => matchingIds.has(r.exerciseId));
 }

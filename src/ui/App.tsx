@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Activity,
+  BookOpen,
+  Calendar,
   Dumbbell,
   Flame,
+  History,
   Settings,
-  TrendingUp,
 } from 'lucide-react';
 import {
   Exercise,
@@ -21,24 +22,25 @@ import {
   buildDraftSessionFromSuggestion,
   suggestNextSession,
 } from '../domain/engine/sequencer';
+import { calculateSessionAxialLoad } from '../domain/engine/rulesEngine';
 import { useWorkoutRepository } from '../data/context/RepositoryContext';
-import { SessionBuilderView } from './views/SessionBuilderView';
-import { LiftTrackerView } from './views/LiftTrackerView';
-import { VolumeAnalyticsView } from './views/VolumeAnalyticsView';
-import { PlanSettingsView } from './views/PlanSettingsView';
+import { PlanView } from './views/PlanView';
+import { CurrentSessionView } from './views/CurrentSessionView';
+import { HistoryView } from './views/HistoryView';
+import { CatalogView } from './views/CatalogView';
+import { SettingsView } from './views/SettingsView';
 import { AppDataSnapshot } from '../data/interfaces/repositories';
 
-type ActiveTab = 'BUILDER' | 'LIFTS' | 'VOLUME' | 'PLAN';
+type ActivePage = 'PLAN' | 'CURRENT' | 'HISTORY' | 'CATALOG' | 'SETTINGS';
 
 export const App: React.FC = () => {
   const repo = useWorkoutRepository();
-  const [activeTab, setActiveTab] = useState<ActiveTab>('BUILDER');
+  const [activePage, setActivePage] = useState<ActivePage>('PLAN');
   const [plan, setPlan] = useState<PlanConfig>(DEFAULT_PLAN_CONFIG);
   const [exercises, setExercises] = useState<Exercise[]>(SEED_EXERCISES);
   const [curatedSupersets, setCuratedSupersets] =
     useState<SupersetPair[]>(SEED_SUPERSETS);
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
-  const [activeDraft, setActiveDraft] = useState<WorkoutSession | null>(null);
   const [loading, setLoading] = useState(true);
 
   const reloadAll = async () => {
@@ -53,14 +55,6 @@ export const App: React.FC = () => {
     setExercises(loadedEx);
     setCuratedSupersets(loadedSS);
     setSessions(loadedSessions);
-
-    const nextSuggestion = suggestNextSession(loadedPlan, loadedSessions);
-    const draft = buildDraftSessionFromSuggestion(
-      nextSuggestion,
-      loadedEx,
-      loadedSS
-    );
-    setActiveDraft(draft);
     setLoading(false);
   };
 
@@ -68,37 +62,89 @@ export const App: React.FC = () => {
     reloadAll();
   }, []);
 
-  const handleSaveSession = async (completedSession: WorkoutSession) => {
-    await repo.saveSession(completedSession);
-    const updatedSessions = await repo.getSessions();
-    setSessions(updatedSessions);
+  const plannedSessions = sessions.filter((s) => s.status === 'PLANNED');
+  const activeSession = sessions.find((s) => s.status === 'ACTIVE') ?? null;
+  const completedSessions = sessions.filter((s) => s.status === 'COMPLETED');
 
-    // Queue next suggested session automatically
-    const nextSuggestion = suggestNextSession(plan, updatedSessions);
-    const nextDraft = buildDraftSessionFromSuggestion(
-      nextSuggestion,
-      exercises,
-      curatedSupersets
-    );
-    setActiveDraft(nextDraft);
+  const handleSaveSession = async (session: WorkoutSession) => {
+    const exerciseMap = new Map(exercises.map((e) => [e.id, e]));
+    const withAxial: WorkoutSession = {
+      ...session,
+      totalAxialLoad: calculateSessionAxialLoad(session, exerciseMap),
+    };
+    await repo.saveSession(withAxial);
+    setSessions(await repo.getSessions());
   };
 
   const handleDeleteSession = async (sessionId: string) => {
     await repo.deleteSession(sessionId);
-    const updatedSessions = await repo.getSessions();
-    setSessions(updatedSessions);
+    setSessions(await repo.getSessions());
+  };
+
+  const handleActivatePlannedSession = async (session: WorkoutSession) => {
+    // Demote any existing active session back to PLANNED so there is only 1 active session
+    if (activeSession && activeSession.id !== session.id) {
+      await repo.saveSession({ ...activeSession, status: 'PLANNED' });
+    }
+    await repo.saveSession({
+      ...session,
+      status: 'ACTIVE',
+      date: new Date().toISOString(),
+    });
+    setSessions(await repo.getSessions());
+    setActivePage('CURRENT');
+  };
+
+  const handleStartRecommendedSession = async () => {
+    if (activeSession) {
+      await repo.saveSession({ ...activeSession, status: 'PLANNED' });
+    }
+    const suggestion = suggestNextSession(plan, completedSessions);
+    const activeDraft = buildDraftSessionFromSuggestion(
+      suggestion,
+      exercises,
+      curatedSupersets,
+      new Date().toISOString(),
+      'ACTIVE'
+    );
+    await repo.saveSession(activeDraft);
+    setSessions(await repo.getSessions());
+    setActivePage('CURRENT');
+  };
+
+  const handleCompleteActiveSession = async (session: WorkoutSession) => {
+    const exerciseMap = new Map(exercises.map((e) => [e.id, e]));
+    const completed: WorkoutSession = {
+      ...session,
+      status: 'COMPLETED',
+      date: new Date().toISOString(),
+      totalAxialLoad: calculateSessionAxialLoad(session, exerciseMap),
+      primaryLiftSets: session.primaryLiftSets.map((s) => ({
+        ...s,
+        completed: true,
+      })),
+    };
+    await repo.saveSession(completed);
+    setSessions(await repo.getSessions());
+    setActivePage('HISTORY');
+  };
+
+  const handleAbandonActiveSession = async (sessionId: string) => {
+    await repo.deleteSession(sessionId);
+    setSessions(await repo.getSessions());
+    setActivePage('PLAN');
+  };
+
+  const handleUpdateSessionNotes = async (sessionId: string, notes: string) => {
+    const target = sessions.find((s) => s.id === sessionId);
+    if (!target) return;
+    await repo.saveSession({ ...target, notes });
+    setSessions(await repo.getSessions());
   };
 
   const handleSavePlan = async (updatedPlan: PlanConfig) => {
     await repo.savePlanConfig(updatedPlan);
     setPlan(updatedPlan);
-    const nextSuggestion = suggestNextSession(updatedPlan, sessions);
-    const nextDraft = buildDraftSessionFromSuggestion(
-      nextSuggestion,
-      exercises,
-      curatedSupersets
-    );
-    setActiveDraft(nextDraft);
   };
 
   const handleImportData = async (snapshot: AppDataSnapshot) => {
@@ -106,7 +152,7 @@ export const App: React.FC = () => {
     await reloadAll();
   };
 
-  if (loading || !activeDraft) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-zinc-950 text-zinc-200 flex items-center justify-center">
         <div className="text-sm font-medium text-zinc-400">
@@ -115,6 +161,36 @@ export const App: React.FC = () => {
       </div>
     );
   }
+
+  const navItems = [
+    {
+      id: 'PLAN' as const,
+      label: 'Plan',
+      badge: plannedSessions.length > 0 ? String(plannedSessions.length) : undefined,
+      icon: Calendar,
+    },
+    {
+      id: 'CURRENT' as const,
+      label: 'Current Session',
+      badge: activeSession ? 'LIVE' : undefined,
+      icon: Dumbbell,
+    },
+    {
+      id: 'HISTORY' as const,
+      label: 'History',
+      icon: History,
+    },
+    {
+      id: 'CATALOG' as const,
+      label: 'Catalog',
+      icon: BookOpen,
+    },
+    {
+      id: 'SETTINGS' as const,
+      label: 'Settings',
+      icon: Settings,
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
@@ -130,26 +206,20 @@ export const App: React.FC = () => {
                 BEAST MODE
               </h1>
               <p className="text-[11px] text-zinc-400 mt-0.5">
-                {plan.scheduleFamily === 'PPL' ? 'PPL' : 'Upper/Lower'} •{' '}
-                {plan.sessionsPerWeek}x/wk • Local PWA
+                {plan.name}
               </p>
             </div>
           </div>
 
-          {/* Desktop Navigation Pills */}
-          <nav className="hidden sm:flex items-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900 p-1">
-            {[
-              { id: 'BUILDER' as const, label: 'Session Planner', icon: Dumbbell },
-              { id: 'LIFTS' as const, label: 'Main Lifts & Log', icon: TrendingUp },
-              { id: 'VOLUME' as const, label: 'Volume & Recovery', icon: Activity },
-              { id: 'PLAN' as const, label: 'Plan & Backup', icon: Settings },
-            ].map((item) => {
+          {/* Desktop 5-Page Navigation */}
+          <nav className="hidden md:flex items-center gap-1 rounded-xl border border-zinc-800 bg-zinc-900 p-1">
+            {navItems.map((item) => {
               const Icon = item.icon;
-              const active = activeTab === item.id;
+              const active = activePage === item.id;
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => setActivePage(item.id)}
                   className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                     active
                       ? 'bg-emerald-500 text-zinc-950'
@@ -157,7 +227,20 @@ export const App: React.FC = () => {
                   }`}
                 >
                   <Icon className="h-3.5 w-3.5" />
-                  {item.label}
+                  <span>{item.label}</span>
+                  {item.badge && (
+                    <span
+                      className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                        active
+                          ? 'bg-zinc-950 text-emerald-400'
+                          : item.badge === 'LIVE'
+                          ? 'bg-emerald-500 text-zinc-950'
+                          : 'bg-zinc-800 text-zinc-300'
+                      }`}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -167,37 +250,52 @@ export const App: React.FC = () => {
 
       {/* Main Content */}
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-5">
-        {activeTab === 'BUILDER' && (
-          <SessionBuilderView
+        {activePage === 'PLAN' && (
+          <PlanView
             plan={plan}
             exercises={exercises}
             curatedSupersets={curatedSupersets}
-            sessions={sessions}
-            activeDraft={activeDraft}
-            onUpdateDraft={setActiveDraft}
+            plannedSessions={plannedSessions}
+            completedSessions={completedSessions}
             onSaveSession={handleSaveSession}
-          />
-        )}
-
-        {activeTab === 'LIFTS' && (
-          <LiftTrackerView
-            exercises={exercises}
-            sessions={sessions}
             onDeleteSession={handleDeleteSession}
+            onActivateSession={handleActivatePlannedSession}
           />
         )}
 
-        {activeTab === 'VOLUME' && (
-          <VolumeAnalyticsView
+        {activePage === 'CURRENT' && (
+          <CurrentSessionView
             plan={plan}
             exercises={exercises}
-            sessions={sessions}
-            activeDraft={activeDraft}
+            curatedSupersets={curatedSupersets}
+            activeSession={activeSession}
+            plannedSessions={plannedSessions}
+            completedSessions={completedSessions}
+            onStartRecommendedSession={handleStartRecommendedSession}
+            onActivatePlannedSession={handleActivatePlannedSession}
+            onUpdateActiveSession={handleSaveSession}
+            onCompleteActiveSession={handleCompleteActiveSession}
+            onAbandonActiveSession={handleAbandonActiveSession}
           />
         )}
 
-        {activeTab === 'PLAN' && (
-          <PlanSettingsView
+        {activePage === 'HISTORY' && (
+          <HistoryView
+            exercises={exercises}
+            completedSessions={completedSessions}
+            onUpdateSessionNotes={handleUpdateSessionNotes}
+          />
+        )}
+
+        {activePage === 'CATALOG' && (
+          <CatalogView
+            exercises={exercises}
+            curatedSupersets={curatedSupersets}
+          />
+        )}
+
+        {activePage === 'SETTINGS' && (
+          <SettingsView
             plan={plan}
             onSavePlan={handleSavePlan}
             onExportData={() => repo.exportSnapshot()}
@@ -206,26 +304,26 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="sm:hidden fixed bottom-0 inset-x-0 z-30 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur px-2 py-1.5 grid grid-cols-4 gap-1">
-        {[
-          { id: 'BUILDER' as const, label: 'Session', icon: Dumbbell },
-          { id: 'LIFTS' as const, label: 'Main Lifts', icon: TrendingUp },
-          { id: 'VOLUME' as const, label: 'Volume', icon: Activity },
-          { id: 'PLAN' as const, label: 'Plan', icon: Settings },
-        ].map((item) => {
+      {/* Mobile Bottom 5-Tab Bar */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur px-1.5 py-1.5 grid grid-cols-5 gap-1">
+        {navItems.map((item) => {
           const Icon = item.icon;
-          const active = activeTab === item.id;
+          const active = activePage === item.id;
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center justify-center rounded-xl py-1.5 text-[11px] font-semibold transition ${
+              onClick={() => setActivePage(item.id)}
+              className={`relative flex flex-col items-center justify-center rounded-xl py-1.5 text-[10px] font-semibold transition ${
                 active ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-400'
               }`}
             >
               <Icon className="h-4 w-4 mb-0.5" />
-              {item.label}
+              <span className="truncate">{item.label}</span>
+              {item.badge && (
+                <span className="absolute top-1 right-2 rounded-full bg-emerald-500 px-1 text-[8px] font-black text-zinc-950">
+                  {item.badge}
+                </span>
+              )}
             </button>
           );
         })}

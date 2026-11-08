@@ -4,9 +4,12 @@ import {
   Database,
   Download,
   Settings,
+  Sliders,
   Upload,
 } from 'lucide-react';
 import {
+  EquipmentCategory,
+  EquipmentPreferenceWeight,
   PlanConfig,
   PlanScheduleFamily,
   SessionsPerWeek,
@@ -14,14 +17,23 @@ import {
 } from '../../domain/models/types';
 import { AppDataSnapshot } from '../../data/interfaces/repositories';
 
-interface PlanSettingsViewProps {
+interface SettingsViewProps {
   plan: PlanConfig;
   onSavePlan: (updated: PlanConfig) => Promise<void>;
   onExportData: () => Promise<AppDataSnapshot>;
   onImportData: (snapshot: AppDataSnapshot) => Promise<void>;
 }
 
-export const PlanSettingsView: React.FC<PlanSettingsViewProps> = ({
+const EQUIPMENT_LABELS: Record<EquipmentCategory, string> = {
+  BARBELL: 'Fixed / Olympic Barbells',
+  DUMBBELL: 'Free Weights / Dumbbells',
+  CABLE: 'Cable Towers & Pulleys',
+  MACHINE: 'Pin / Plate-Loaded Machines',
+  TURF: 'Turf / Sled / Kettlebell Carries',
+  BODYWEIGHT: 'Bodyweight / Decompression Stations',
+};
+
+export const SettingsView: React.FC<SettingsViewProps> = ({
   plan,
   onSavePlan,
   onExportData,
@@ -29,33 +41,71 @@ export const PlanSettingsView: React.FC<PlanSettingsViewProps> = ({
 }) => {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
+  const buildPlanName = (
+    family: PlanScheduleFamily,
+    variant: UpperLowerVariant,
+    sessionsPerWeek: SessionsPerWeek
+  ) => {
+    if (family === 'PPL') {
+      return `Push / Pull / Legs (${sessionsPerWeek}-Session Rolling Split)`;
+    }
+    const vName =
+      variant === 'BUDDY_ONLY'
+        ? 'Buddy Upper / Lower'
+        : variant === 'SOLO_ONLY'
+        ? 'Solo Upper / Lower'
+        : 'Hybrid Solo + Buddy Upper / Lower';
+    return `${vName} (${sessionsPerWeek}-Session Split)`;
+  };
+
   const handleFamilyChange = async (family: PlanScheduleFamily) => {
-    const name =
-      family === 'PPL'
-        ? `Rolling Push / Pull / Legs (${plan.sessionsPerWeek}-Day)`
-        : `Upper / Lower Split (${plan.sessionsPerWeek}-Day)`;
     await onSavePlan({
       ...plan,
       scheduleFamily: family,
-      name,
+      name: buildPlanName(family, plan.upperLowerVariant, plan.sessionsPerWeek),
     });
-    setStatusMessage(`Updated schedule family to ${family}`);
+    setStatusMessage(`Updated primary plan to ${family}`);
   };
 
   const handleVariantChange = async (variant: UpperLowerVariant) => {
     await onSavePlan({
       ...plan,
       upperLowerVariant: variant,
+      name: buildPlanName(plan.scheduleFamily, variant, plan.sessionsPerWeek),
     });
-    setStatusMessage(`Updated Upper/Lower mode to ${variant}`);
+    setStatusMessage(`Updated Upper/Lower station mode to ${variant}`);
   };
 
   const handleSessionsPerWeekChange = async (count: SessionsPerWeek) => {
     await onSavePlan({
       ...plan,
       sessionsPerWeek: count,
+      name: buildPlanName(plan.scheduleFamily, plan.upperLowerVariant, count),
     });
     setStatusMessage(`Updated weekly session target to ${count} sessions/week`);
+  };
+
+  const handleEquipmentWeightChange = async (
+    eq: EquipmentCategory,
+    weight: EquipmentPreferenceWeight
+  ) => {
+    const nextPrefs: Record<EquipmentCategory, EquipmentPreferenceWeight> = {
+      BARBELL: 5,
+      DUMBBELL: 4,
+      CABLE: 4,
+      MACHINE: 4,
+      TURF: 4,
+      BODYWEIGHT: 3,
+      ...(plan.equipmentPreferences ?? {}),
+      [eq]: weight,
+    };
+    await onSavePlan({
+      ...plan,
+      equipmentPreferences: nextPrefs,
+    });
+    setStatusMessage(
+      `Updated ${EQUIPMENT_LABELS[eq]} preference weighting to ${weight}/5`
+    );
   };
 
   const handleExportJson = async () => {
@@ -80,13 +130,17 @@ export const PlanSettingsView: React.FC<PlanSettingsViewProps> = ({
       const parsed = JSON.parse(text) as AppDataSnapshot;
       await onImportData(parsed);
       setStatusMessage('Imported workout snapshot into local IndexedDB!');
-    } catch (err) {
+    } catch {
       setStatusMessage('Invalid JSON backup file.');
     }
   };
 
+  const currentCeiling =
+    plan.weeklySetCeilingOverride ??
+    (plan.sessionsPerWeek === 2 ? 10 : plan.sessionsPerWeek === 3 ? 13 : 15);
+
   return (
-    <div className="space-y-6 pb-16">
+    <div className="space-y-6 pb-20">
       {statusMessage && (
         <div className="rounded-xl border border-emerald-500/40 bg-emerald-950/50 p-3.5 text-xs sm:text-sm text-emerald-200 flex items-center gap-2">
           <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
@@ -94,20 +148,20 @@ export const PlanSettingsView: React.FC<PlanSettingsViewProps> = ({
         </div>
       )}
 
-      {/* Program Split & Frequency Selector */}
+      {/* 1. PRIMARY TRAINING PLAN & WEEKLY SESSION TARGET */}
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 sm:p-5 space-y-5">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400">
             <Settings className="h-4 w-4" />
-            Program Schedule & Split Configuration
+            Primary Training Plan &amp; Schedule
           </div>
           <h2 className="text-lg font-bold text-white mt-0.5">{plan.name}</h2>
           <p className="text-xs text-zinc-400">
-            Select your primary split (Push/Pull/Legs or Upper/Lower) and weekly session target (2, 3, or 4 days/week).
+            Once configured here, the Plan and Current Session pages automatically sequence your workouts around this program.
           </p>
         </div>
 
-        {/* 1. Split Family */}
+        {/* Split Family */}
         <div className="space-y-2">
           <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
             1. Program Split Architecture
@@ -122,10 +176,10 @@ export const PlanSettingsView: React.FC<PlanSettingsViewProps> = ({
               }`}
             >
               <div className="text-sm font-bold text-white">
-                Upper / Lower Split (Solo, Buddy, or 4-Day Hybrid)
+                Upper / Lower Split (Default: Buddy 4-Session)
               </div>
               <p className="text-xs text-zinc-400 mt-1">
-                Alternates Upper and Lower sessions. Supports 2, 3, or 4 days/week (4 days = Upper/Lower twice a week).
+                Alternates Upper and Lower days. 4 sessions/week = Upper/Lower twice weekly.
               </p>
             </button>
 
@@ -141,7 +195,7 @@ export const PlanSettingsView: React.FC<PlanSettingsViewProps> = ({
                 Push / Pull / Legs (PPL Rolling Split)
               </div>
               <p className="text-xs text-zinc-400 mt-1">
-                Separates movement planes (Push → Pull → Legs). Cycles continuously across 2, 3, or 4 weekly sessions.
+                Cycles Push → Pull → Legs continuously across 2, 3, or 4 sessions per week.
               </p>
             </button>
           </div>
@@ -156,14 +210,14 @@ export const PlanSettingsView: React.FC<PlanSettingsViewProps> = ({
             <div className="grid gap-2.5 sm:grid-cols-3">
               {[
                 {
+                  id: 'BUDDY_ONLY' as const,
+                  title: 'Buddy Partner Flow (Active)',
+                  desc: 'Partner station swaps, shared bench spotter & You-Go-I-Go sleds',
+                },
+                {
                   id: 'HYBRID_SOLO_BUDDY' as const,
                   title: 'Hybrid Solo + Buddy',
                   desc: 'Solo Upper/Lower early week → Buddy Upper/Lower (36–48h turnaround)',
-                },
-                {
-                  id: 'BUDDY_ONLY' as const,
-                  title: 'Buddy Partner Flow',
-                  desc: 'Partner-optimized station swaps & You-Go-I-Go sleds',
                 },
                 {
                   id: 'SOLO_ONLY' as const,
@@ -188,7 +242,7 @@ export const PlanSettingsView: React.FC<PlanSettingsViewProps> = ({
           </div>
         )}
 
-        {/* 2. Weekly Session Count (2, 3, or 4) */}
+        {/* Weekly Session Count */}
         <div className="space-y-2">
           <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
             2. Sessions Per Week Target
@@ -204,7 +258,9 @@ export const PlanSettingsView: React.FC<PlanSettingsViewProps> = ({
                     : 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-zinc-700'
                 }`}
               >
-                <div className="text-base font-extrabold">{count} Sessions / Wk</div>
+                <div className="text-base font-extrabold">
+                  {count} Sessions / Wk
+                </div>
                 <div
                   className={`text-[11px] mt-0.5 ${
                     plan.sessionsPerWeek === count
@@ -216,74 +272,107 @@ export const PlanSettingsView: React.FC<PlanSettingsViewProps> = ({
                     ? 'Upper/Lower 2x per week'
                     : count === 3
                     ? 'Classic 3-day cadence'
-                    : 'Minimalist 2-day maintenance'}
+                    : 'Minimalist 2-day cadence'}
                 </div>
               </button>
             ))}
           </div>
         </div>
+      </div>
 
-        {/* 3. Default Superset & Finisher Counts */}
-        <div className="grid sm:grid-cols-2 gap-4 pt-2">
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-zinc-400">
-              Default Supersets Per Session (2, 3, or 4)
-            </label>
-            <div className="flex gap-2">
-              {([2, 3, 4] as const).map((n) => (
-                <button
-                  key={n}
-                  onClick={() =>
-                    onSavePlan({ ...plan, targetSupersetsPerSession: n })
-                  }
-                  className={`flex-1 rounded-xl border py-2 text-xs font-bold ${
-                    plan.targetSupersetsPerSession === n
-                      ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300'
-                      : 'border-zinc-800 bg-zinc-950 text-zinc-400'
-                  }`}
-                >
-                  {n} Supersets
-                </button>
-              ))}
-            </div>
+      {/* 2. USAGE THRESHOLDS & EQUIPMENT PREFERENCE WEIGHTINGS */}
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 sm:p-5 space-y-5">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400">
+            <Sliders className="h-4 w-4" />
+            Usage Thresholds &amp; Equipment Preference Weightings
           </div>
+          <p className="text-xs text-zinc-400 mt-0.5">
+            Fine-tune your weekly muscle volume ceiling and equipment priorities used by the Quick Switch &amp; auto-recommendation engine.
+          </p>
+        </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-zinc-400">
-              Default Finishers Per Session (1 or 2)
-            </label>
-            <div className="flex gap-2">
-              {([1, 2] as const).map((n) => (
-                <button
-                  key={n}
-                  onClick={() =>
-                    onSavePlan({ ...plan, targetFinishersPerSession: n })
-                  }
-                  className={`flex-1 rounded-xl border py-2 text-xs font-bold ${
-                    plan.targetFinishersPerSession === n
-                      ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300'
-                      : 'border-zinc-800 bg-zinc-950 text-zinc-400'
-                  }`}
+        {/* Weekly Volume Ceiling Slider */}
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3.5 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-white">
+              Weekly Muscle Region Set Ceiling (Overwork Warning Threshold)
+            </span>
+            <span className="rounded bg-emerald-500/20 px-2 py-0.5 font-bold text-emerald-300">
+              {currentCeiling} sets / 7 days
+            </span>
+          </div>
+          <input
+            type="range"
+            min={8}
+            max={22}
+            value={currentCeiling}
+            onChange={(e) =>
+              onSavePlan({
+                ...plan,
+                weeklySetCeilingOverride: Number(e.target.value),
+              })
+            }
+            className="w-full accent-emerald-500"
+          />
+          <div className="flex justify-between text-[10px] text-zinc-500">
+            <span>Conservative (8 sets/wk)</span>
+            <span>Standard (14–15 sets/wk)</span>
+            <span>High Volume (22 sets/wk)</span>
+          </div>
+        </div>
+
+        {/* Equipment Priority Weights */}
+        <div className="space-y-2">
+          <div className="text-xs font-bold text-zinc-300">
+            Equipment Preference Weightings (1 = Avoid, 5 = High Priority in Quick-Switch Suggestions)
+          </div>
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            {(Object.keys(EQUIPMENT_LABELS) as EquipmentCategory[]).map((eq) => {
+              const weight = plan.equipmentPreferences?.[eq] ?? 4;
+              return (
+                <div
+                  key={eq}
+                  className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3 flex items-center justify-between gap-2"
                 >
-                  {n} {n === 1 ? 'Finisher' : 'Finishers'}
-                </button>
-              ))}
-            </div>
+                  <span className="text-xs font-semibold text-zinc-200">
+                    {EQUIPMENT_LABELS[eq]}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {([1, 2, 3, 4, 5] as EquipmentPreferenceWeight[]).map(
+                      (w) => (
+                        <button
+                          key={w}
+                          onClick={() => handleEquipmentWeightChange(eq, w)}
+                          className={`h-6 w-6 rounded text-xs font-bold transition ${
+                            weight === w
+                              ? 'bg-emerald-500 text-zinc-950'
+                              : 'bg-zinc-800 text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          {w}
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Local Storage Backup & Cross-Device JSON Share */}
+      {/* 3. LOCAL DATABASE BACKUP & EXPORT */}
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 sm:p-5 space-y-3">
         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400">
           <Database className="h-4 w-4" />
-          Local IndexedDB Storage & Cross-Device Backup
+          Local IndexedDB Storage &amp; Cross-Device Backup
         </div>
         <p className="text-xs text-zinc-400">
-          All data is stored locally in your browser&apos;s IndexedDB via <code>DexieWorkoutRepository</code>. Export a JSON snapshot to share with your training partner or transfer to another phone, or swap the repository adapter later for PocketBase/Supabase.
+          Export your planned sessions, completed workout logs, and settings to JSON or restore from a backup file.
         </p>
 
-        <div className="flex flex-wrap gap-3 pt-2">
+        <div className="flex flex-wrap gap-3 pt-1">
           <button
             onClick={handleExportJson}
             className="inline-flex items-center gap-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 px-4 py-2.5 text-xs font-semibold text-white transition"

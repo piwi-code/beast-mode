@@ -13,7 +13,15 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 0,
     jointStressLevel: 3,
     runnerBenefitNote: 'Builds knee-extension power, tendon stiffness, and bilateral hip strength.',
+    executionDirections:
+      'Set bar across upper traps/rear delts, brace 360-degree core, break at hips and knees simultaneously to parallel or slightly below, and drive forcefully through mid-foot.',
+    formTips: [
+      'Take a full diaphragmatic breath before unhinging',
+      'Track knees inline with 2nd/3rd toes',
+      'Keep upper back tight to minimize spinal shear',
+    ],
     isPrimaryAnchorCandidate: true,
+    mainLiftCategory: 'SQUAT',
     defaultSets: 4,
     defaultReps: '5-8',
   },
@@ -28,13 +36,44 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 1,
     jointStressLevel: 2,
     runnerBenefitNote: 'Thoracic cage expansion and ribcage stabilization under load.',
+    executionDirections:
+      'Retract and depress scapulae into the bench, plant feet firmly for leg drive, lower bar under control to lower sternum with ~45-60° elbow tuck, and press back toward shoulders.',
+    formTips: [
+      'Keep wrists stacked directly over elbows',
+      'Maintain glute and upper-back contact with bench',
+      'Use an active spotter on Buddy Upper heavy top sets',
+    ],
     isPrimaryAnchorCandidate: true,
+    mainLiftCategory: 'BENCH',
     defaultSets: 4,
     defaultReps: '5-8',
   },
   {
+    id: 'bb_deadlift',
+    name: 'Conventional / Trap-Bar Deadlift',
+    pattern: 'HIP_HINGE',
+    primaryMuscles: ['HAMSTRINGS', 'GLUTES'],
+    secondaryMuscles: ['UPPER_BACK', 'LATS', 'CORE'],
+    equipment: 'BARBELL',
+    axialLoadScore: 3,
+    gripTax: 2,
+    jointStressLevel: 3,
+    runnerBenefitNote: 'Maximal posterior chain force production and horizontal sprint acceleration.',
+    executionDirections:
+      'Stand with mid-foot under the bar, hinge down to grip, pull slack out of the bar while packing lats ("protect your armpits"), push the floor away, and lock out with glutes.',
+    formTips: [
+      'Pull slack out of the bar before initiating lift',
+      'Avoid hyperextending lumbar spine at lockout',
+      'Reset cleanly on the floor between heavy reps',
+    ],
+    isPrimaryAnchorCandidate: true,
+    mainLiftCategory: 'DEADLIFT',
+    defaultSets: 3,
+    defaultReps: '4-6',
+  },
+  {
     id: 'bb_rdl',
-    name: 'Barbell Romanian Deadlift',
+    name: 'Barbell Romanian Deadlift (RDL)',
     pattern: 'HIP_HINGE',
     primaryMuscles: ['HAMSTRINGS', 'GLUTES'],
     secondaryMuscles: ['UPPER_BACK', 'CORE'],
@@ -43,7 +82,15 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 2,
     jointStressLevel: 2,
     runnerBenefitNote: 'Hamstring eccentric strength and posterior hip power.',
+    executionDirections:
+      'Start from top standing lockout, unlock knees (~15° soft bend), push hips straight back toward the wall while keeping the bar grazing the thighs/shins until hamstring stretch peaks.',
+    formTips: [
+      'Stop downward descent the instant hips stop moving backward',
+      'Keep lats engaged so the bar never drifts forward off the legs',
+      'Do not pair with Back Squat in the same session (Axial Load = 6)',
+    ],
     isPrimaryAnchorCandidate: true,
+    mainLiftCategory: 'DEADLIFT',
     defaultSets: 4,
     defaultReps: '6-8',
   },
@@ -58,7 +105,14 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 1,
     jointStressLevel: 2,
     runnerBenefitNote: 'Overhead core bracing and scapular upward rotation.',
+    executionDirections:
+      'Squeeze glutes and quads hard, rest bar on front delts, tuck chin slightly as bar clears forehead, and press vertically to stacked overhead lockout.',
+    formTips: [
+      'Flex glutes throughout the set to prevent lower-back layback',
+      'Keep elbows slightly forward of the bar at the bottom',
+    ],
     isPrimaryAnchorCandidate: true,
+    mainLiftCategory: 'OTHER',
     defaultSets: 4,
     defaultReps: '6-8',
   },
@@ -73,7 +127,14 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 1,
     jointStressLevel: 2,
     runnerBenefitNote: 'Unilateral shoulder stability and deep pec stretch for Solo Upper days.',
+    executionDirections:
+      'Kick dumbbells back into position, set shoulder blades, lower bells with neutral/45° grip to chest level for a controlled stretch, and press up in a subtle arc.',
+    formTips: [
+      'Avoid clanking dumbbells together at the top (keep tension on pecs)',
+      'Great solo anchor when no spotter is available',
+    ],
     isPrimaryAnchorCandidate: true,
+    mainLiftCategory: 'BENCH',
     defaultSets: 4,
     defaultReps: '8-10',
   },
@@ -88,7 +149,14 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 1,
     jointStressLevel: 2,
     runnerBenefitNote: 'Clavicular pec development; watch overlap if paired after Flat Barbell Bench.',
+    executionDirections:
+      'Set bench to 30° incline (not 45°+), lower dumbbells toward upper chest/clavicle with elbows tucked ~45°, and drive up.',
+    formTips: [
+      'Use 30° bench angle to target upper chest instead of front delts',
+      'Avoid stacking right after heavy Flat Barbell Bench (use Low-to-High Cable Fly instead)',
+    ],
     isPrimaryAnchorCandidate: true,
+    mainLiftCategory: 'BENCH',
     defaultSets: 3,
     defaultReps: '8-10',
   },
@@ -103,7 +171,14 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 2,
     jointStressLevel: 2,
     runnerBenefitNote: 'Spinal traction and upper-body relative strength.',
+    executionDirections:
+      'Start from a dead hang, depress scapulae first, drive elbows down toward hips until chin clears the bar, and lower under 2-second control.',
+    formTips: [
+      'Avoid kipping or craning the neck',
+      'Cross ankles or hold hollow-body core tension',
+    ],
     isPrimaryAnchorCandidate: true,
+    mainLiftCategory: 'OTHER',
     defaultSets: 4,
     defaultReps: '6-10',
   },
@@ -118,7 +193,13 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 2,
     jointStressLevel: 2,
     runnerBenefitNote: 'Posterior chain isometric endurance and upper back thickness.',
+    executionDirections:
+      'Hinge torso nearly parallel to the floor, row the barbell explosively to lower ribs/upper abdomen, and control back down.',
+    formTips: [
+      'Swap to Chest-Supported Machine Row if lower back is fatigued from Squats/RDLs',
+    ],
     isPrimaryAnchorCandidate: true,
+    mainLiftCategory: 'OTHER',
     defaultSets: 4,
     defaultReps: '6-8',
   },
@@ -135,6 +216,12 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 0,
     jointStressLevel: 1,
     runnerBenefitNote: 'Direct knee flexion to protect ACL and control foot strike deceleration.',
+    executionDirections:
+      'Align knee joint with machine pivot, lock thigh pad tightly over distal quads, dorsiflex ankles, curl all the way under the seat, and take 2–3 seconds on the eccentric.',
+    formTips: [
+      'Lean slightly forward at the hips to pre-stretch the hamstrings at the hip joint',
+      'Zero spinal axial load — ideal post-squat posterior chain builder',
+    ],
     defaultSets: 3,
     defaultReps: '10-12',
   },
@@ -149,6 +236,11 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 0,
     jointStressLevel: 1,
     runnerBenefitNote: 'Gastrocnemius load with 2-second deficit stretch for Achilles stiffness.',
+    executionDirections:
+      'Place balls of feet on platform edge, keep knees locked (targets gastrocnemius), pause 2 full seconds in the bottom stretch to remove Achilles bounce, and drive onto big toe.',
+    formTips: [
+      '2-second pause at the bottom is mandatory so the Achilles tendon doesn’t do all the work via elastic recoil',
+    ],
     defaultSets: 3,
     defaultReps: '12-15',
   },
@@ -163,6 +255,12 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 2,
     jointStressLevel: 1,
     runnerBenefitNote: 'Spinal decompression and lat-to-glute sling reinforcement.',
+    executionDirections:
+      'Lock thighs under pad, allow shoulders to elevate slightly at the top for lumbar/thoracic traction, then drive elbows down and in toward your front pockets.',
+    formTips: [
+      'Use straps if grip is taxed so lats reach true failure',
+      'Let the weight gently stretch the spine at the top of each rep',
+    ],
     defaultSets: 3,
     defaultReps: '10-12',
   },
@@ -177,6 +275,12 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 0,
     jointStressLevel: 1,
     runnerBenefitNote: 'Posterior pelvic tilt and lumbar traction without hanging grip stress.',
+    executionDirections:
+      'Support weight on forearm pads with shoulders pressed down (active depression), curl pelvis up toward ribcage (don’t just lift knees with hip flexors), and lower slowly.',
+    formTips: [
+      'Focus on curling the tailbone under at the top to decompress lumbar discs',
+      'Zero grip tax — pairs seamlessly with Lat Pulldowns',
+    ],
     defaultSets: 3,
     defaultReps: '12-15',
   },
@@ -191,6 +295,11 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 0,
     jointStressLevel: 1,
     runnerBenefitNote: "Direct floor/bench alternative to Captain's Chair.",
+    executionDirections:
+      'Lie on flat/decline bench holding the top edge behind your head, bend knees 90°, roll pelvis and lower spine off the pad toward chest, and lower vertebrae by vertebrae.',
+    formTips: [
+      'Control the eccentric so momentum doesn’t take over',
+    ],
     defaultSets: 3,
     defaultReps: '12-15',
   },
@@ -205,6 +314,12 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 1,
     jointStressLevel: 2,
     runnerBenefitNote: 'Unilateral pelvic stability and hip flexor control in forward motion.',
+    executionDirections:
+      'Hold dumbbells at sides, step forward with slight torso lean, lower until back knee lightly kisses the turf, and drive through the front heel/mid-foot into the next stride.',
+    formTips: [
+      'Keep pelvis level (no hip drop on the swing leg)',
+      'Pair with Standing DB Hammer Curls using the same dumbbells when floor space is tight',
+    ],
     defaultSets: 3,
     defaultReps: '10/leg',
   },
@@ -219,6 +334,11 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 0,
     jointStressLevel: 1,
     runnerBenefitNote: 'Rectus femoris and VMO isolation with zero axial spinal load.',
+    executionDirections:
+      'Set backrest so knee joint aligns with machine cam, extend legs to full lockout with a 1-second squeeze at the top, and lower under control.',
+    formTips: [
+      'Pull yourself down into the seat using the side handles',
+    ],
     defaultSets: 3,
     defaultReps: '12-15',
   },
@@ -235,6 +355,12 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 1,
     jointStressLevel: 1,
     runnerBenefitNote: 'Thoracic extension and scapular retraction without spinal loading.',
+    executionDirections:
+      'Set seat height so chest pad supports sternum, protract scapulae at full reach, then retract and row handles to lower ribs.',
+    formTips: [
+      'Keep chest glued to the pad — do not rock backward',
+      'Pairs with Low-to-High Cable Fly for zero tricep/grip interference',
+    ],
     defaultSets: 3,
     defaultReps: '10-12',
   },
@@ -249,6 +375,11 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 1,
     jointStressLevel: 1,
     runnerBenefitNote: 'Zero lower-back shear; ideal for 36h turnaround Buddy Upper sessions.',
+    executionDirections:
+      'Lie chest-down on a 30–45° incline bench, let dumbbells hang straight down, and row elbows back toward hips with a pause at peak contraction.',
+    formTips: [
+      'Think about driving elbows back rather than curling with biceps',
+    ],
     defaultSets: 3,
     defaultReps: '10-12',
   },
@@ -263,6 +394,12 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 0,
     jointStressLevel: 1,
     runnerBenefitNote: 'Upper pectoral adduction without tricep or joint grinding.',
+    executionDirections:
+      'Set dual pulleys near the bottom, step forward for a light pre-stretch, scoop hands upward and inward to chin/clavicle height with soft fixed elbows.',
+    formTips: [
+      'Bring upper arms across the midline to fully shorten clavicular pec fibers',
+      'Spares triceps after heavy Flat Barbell Bench Press',
+    ],
     defaultSets: 3,
     defaultReps: '12-15',
   },
@@ -277,6 +414,11 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 1,
     jointStressLevel: 1,
     runnerBenefitNote: 'Brachioradialis and forearm strength for running arm carriage.',
+    executionDirections:
+      'Hold dumbbells with neutral (palms facing each other) grip, pin elbows to ribs, curl thumbs toward front delts, and lower cleanly.',
+    formTips: [
+      'Keep torso still — avoid swinging hips',
+    ],
     defaultSets: 3,
     defaultReps: '10-12',
   },
@@ -291,6 +433,11 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 1,
     jointStressLevel: 2,
     runnerBenefitNote: 'Long-head triceps stretch on shared bench station.',
+    executionDirections:
+      'Lie on flat/slight-incline bench, angle upper arms ~15° back toward head to keep constant tension, bend only at the elbows to lower weight behind forehead, and extend.',
+    formTips: [
+      'Angling upper arms slightly behind vertical protects the elbows and stretches the long head',
+    ],
     defaultSets: 3,
     defaultReps: '10-12',
   },
@@ -305,6 +452,11 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 1,
     jointStressLevel: 1,
     runnerBenefitNote: 'Lengthened bicep peak contraction on shared bench station.',
+    executionDirections:
+      'Sit back on a 45–60° incline bench, let arms hang behind torso to stretch the long head of the biceps, supinate palms as you curl up.',
+    formTips: [
+      'Keep shoulders pinned back against the pad throughout the curl',
+    ],
     defaultSets: 3,
     defaultReps: '10-12',
   },
@@ -319,6 +471,11 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 0,
     jointStressLevel: 1,
     runnerBenefitNote: 'Constant tension medial delt work with zero axial or tricep load.',
+    executionDirections:
+      'Set cable pulley at wrist/knee height, stand slightly angled away, sweep arm out in the scapular plane (~30° forward of torso) up to shoulder height.',
+    formTips: [
+      'Lead with the wrist/elbow rather than shrugging the upper traps',
+    ],
     defaultSets: 3,
     defaultReps: '12-15',
   },
@@ -333,6 +490,11 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 0,
     jointStressLevel: 1,
     runnerBenefitNote: 'Elbow-friendly lateral/medial tricep head lockout.',
+    executionDirections:
+      'Set pulley at top, hinge slightly forward, lock elbows at sides, extend forearms down and spread the rope ends apart at full lockout.',
+    formTips: [
+      'Do not let elbows flare or drift forward during the eccentric',
+    ],
     defaultSets: 3,
     defaultReps: '12-15',
   },
@@ -349,6 +511,12 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 1,
     jointStressLevel: 1,
     runnerBenefitNote: 'Zero eccentric DOMS, patellar tendon health via reverse drag, propulsive power.',
+    executionDirections:
+      '1 Set = 15–20m Forward Push (45° body lean, forceful toe-off) immediately followed by 15–20m Backward Drag holding mid-posts or straps (step heel-to-toe). Perform 3 rounds with 60–90s rest (or You-Go-I-Go partner swap).',
+    formTips: [
+      'Load: Sled tare weight + 20–30 kg plate load',
+      'On backward drag, sit hips slightly back and extend knees completely on every step for patellar tendon remodeling',
+    ],
     isFinisherCandidate: true,
     defaultSets: 3,
     defaultReps: '15-20m Push + 15-20m Drag',
@@ -364,6 +532,11 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 1,
     jointStressLevel: 1,
     runnerBenefitNote: 'Counters hunched posture; activates external rotators and lower traps.',
+    executionDirections:
+      'Set pulley at upper-chest/eye height with a long rope (or two ropes), pull thumbs back past ears into a "double biceps" external rotation pose, and hold 1 second.',
+    formTips: [
+      'Finish with hands wider than elbows to force shoulder external rotation',
+    ],
     isFinisherCandidate: true,
     defaultSets: 3,
     defaultReps: '15-20',
@@ -379,6 +552,11 @@ export const SEED_EXERCISES: Exercise[] = [
     gripTax: 2,
     jointStressLevel: 1,
     runnerBenefitNote: 'Anti-lateral flexion core stability and gait stiffness under load.',
+    executionDirections:
+      'Pick up heavy dumbbells, stand tall with shoulders packed back and down, walk 30m with short, crisp, heel-to-toe steps without torso sway.',
+    formTips: [
+      'Keep bells slightly off your thighs so your lats and traps stabilize the load',
+    ],
     isFinisherCandidate: true,
     defaultSets: 3,
     defaultReps: '30m Carry',
@@ -394,6 +572,8 @@ export const SEED_SUPERSETS: SupersetPair[] = [
     pairingType: 'COMPOUND_ISOLATION',
     rationale:
       'Direct knee flexion paired with deep deficit calf loading. Completely deloads lumbar spine after heavy squats.',
+    executionNotes:
+      'Perform 10–12 controlled reps on Seated Hamstring Curl, then step directly to Standing Calf Raise for 12–15 reps with a 2-second bottom stretch.',
     buddyFriendly: true,
     recommendedSplits: ['BUDDY_LOWER', 'SOLO_LOWER', 'PPL_LEGS'],
   },
@@ -405,6 +585,8 @@ export const SEED_SUPERSETS: SupersetPair[] = [
     pairingType: 'DECOMPRESSION',
     rationale:
       'Vertical pulling paired with abdominal pelvic curling. Decompresses lumbar discs while working antagonistic lines.',
+    executionNotes:
+      'Partner A completes 10–12 Neutral-Grip Lat Pulldowns while Partner B performs 12–15 Captain’s Chair Pelvic Curls, then swap immediately.',
     buddyFriendly: true,
     recommendedSplits: ['BUDDY_LOWER', 'SOLO_LOWER', 'PPL_LEGS', 'PPL_PULL'],
   },
@@ -416,6 +598,8 @@ export const SEED_SUPERSETS: SupersetPair[] = [
     pairingType: 'ANTAGONIST',
     rationale:
       'Zero tricep overlap. Horizontal pulling paired with upper chest squeeze. Perfect station swap for partner training.',
+    executionNotes:
+      'One partner rows on the Chest-Supported Machine while the other performs Low-to-High Cable Flyes; swap stations with ~30s transition.',
     buddyFriendly: true,
     recommendedSplits: ['BUDDY_UPPER', 'SOLO_UPPER', 'PPL_PUSH', 'PPL_PULL'],
   },
@@ -427,6 +611,8 @@ export const SEED_SUPERSETS: SupersetPair[] = [
     pairingType: 'UPPER_LOWER',
     rationale:
       'Uses the same dumbbells. Allows quads/glutes to recover while accumulating arm volume in a single footprint.',
+    executionNotes:
+      'Complete 10 lunges per leg down the turf/floor, rest 20 seconds, then knock out 10–12 Standing Hammer Curls with the same dumbbells.',
     buddyFriendly: false,
     recommendedSplits: ['SOLO_LOWER', 'PPL_LEGS'],
   },
@@ -438,6 +624,8 @@ export const SEED_SUPERSETS: SupersetPair[] = [
     pairingType: 'ANTAGONIST',
     rationale:
       'Antagonist biceps and triceps isolation sharing a single bench station with fast partner turnaround.',
+    executionNotes:
+      'Keep one adjustable bench and two pairs of dumbbells/EZ-bar. Alternate Skull Crushers and Seated Curls for 2–3 pump sets.',
     buddyFriendly: true,
     recommendedSplits: ['BUDDY_UPPER', 'SOLO_UPPER', 'PPL_PUSH', 'PPL_PULL'],
   },
@@ -449,6 +637,8 @@ export const SEED_SUPERSETS: SupersetPair[] = [
     pairingType: 'COMPOUND_ISOLATION',
     rationale:
       'Chest-supported row paired with cable lateral raises; spares pre-fatigued triceps and lower back.',
+    executionNotes:
+      'Ideal when benching within 36–48h of a prior upper session. Zero lower-back or tricep tax.',
     buddyFriendly: true,
     recommendedSplits: ['BUDDY_UPPER', 'SOLO_UPPER', 'PPL_PULL', 'PPL_PUSH'],
   },
@@ -460,6 +650,8 @@ export const SEED_SUPERSETS: SupersetPair[] = [
     pairingType: 'COMPOUND_ISOLATION',
     rationale:
       'High-density lateral delt and tricep isolation on a single cable column without shoulder joint shear.',
+    executionNotes:
+      'Claim one cable pulley column; perform Single-Arm Lateral Raises, slide pulley to top for Rope Pushdowns.',
     buddyFriendly: false,
     recommendedSplits: ['SOLO_UPPER', 'PPL_PUSH', 'BUDDY_UPPER'],
   },
@@ -471,6 +663,8 @@ export const SEED_SUPERSETS: SupersetPair[] = [
     pairingType: 'DECOMPRESSION',
     rationale:
       'Spine-neutral VMO/rectus femoris work paired with bench pelvic curls when Captain’s Chair is taken.',
+    executionNotes:
+      '12–15 Seated Leg Extensions with a 1s top hold paired with 12–15 controlled Bench Reverse Curls.',
     buddyFriendly: true,
     recommendedSplits: ['SOLO_LOWER', 'BUDDY_LOWER', 'PPL_LEGS'],
   },
@@ -478,11 +672,19 @@ export const SEED_SUPERSETS: SupersetPair[] = [
 
 export const DEFAULT_PLAN_CONFIG: PlanConfig = {
   id: 'default_plan',
-  name: 'Hybrid Solo + Buddy Upper/Lower (4-Day)',
+  name: 'Buddy Upper / Lower (4-Session Split)',
   scheduleFamily: 'UPPER_LOWER',
-  upperLowerVariant: 'HYBRID_SOLO_BUDDY',
+  upperLowerVariant: 'BUDDY_ONLY',
   sessionsPerWeek: 4,
   targetSupersetsPerSession: 2,
   targetFinishersPerSession: 1,
+  equipmentPreferences: {
+    BARBELL: 5,
+    DUMBBELL: 4,
+    CABLE: 4,
+    MACHINE: 4,
+    TURF: 4,
+    BODYWEIGHT: 3,
+  },
   updatedAt: new Date().toISOString(),
 };

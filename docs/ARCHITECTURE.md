@@ -31,11 +31,12 @@ beast-mode/
 │   │   └── context/         # Dependency Injection provider so UI only talks to IRepository interfaces
 │   └── ui/                  # PRESENTATION LAYER — React + TypeScript + Tailwind CSS
 │       ├── components/      # Reusable UI building blocks (SafeguardBanners, SupersetCard, VolumeChart)
-│       ├── views/           # Core screens:
-│       │   ├── SessionBuilderView.tsx   # Build & log active workout, toggle Paired vs Split exercises
-│       │   ├── LiftTrackerView.tsx      # Main lift 1RM & top-set progression history
-│       │   ├── VolumeAnalyticsView.tsx  # 48h recovery, 7d/14d muscle distribution & fatigue status
-│       │   └── PlanSettingsView.tsx     # Configure PPL vs Upper/Lower (2, 3, or 4 days) & JSON share/backup
+│       ├── views/           # 5 Core Pages:
+│       │   ├── PlanView.tsx             # 14-day calendar, lightweight session planning, 4-color health & Quick Switch, Current vs Future loading
+│       │   ├── CurrentSessionView.tsx   # Active gym floor session tracker (weights, reps, 2/3 set toggles, pivot split, complete/abandon)
+│       │   ├── HistoryView.tsx          # Bench/Squat/Deadlift progress charts, 28-day calendar & session inspector with editable notes
+│       │   ├── CatalogView.tsx          # Searchable superset & exercise directory with execution directions & form cues
+│       │   └── SettingsView.tsx         # Primary plan config (Buddy 4-Day default), volume ceilings, equipment weightings & JSON backup
 │       └── App.tsx
 ```
 

@@ -44,10 +44,13 @@ export interface Exercise {
   gripTax: 0 | 1 | 2;
   jointStressLevel: 1 | 2 | 3;
   runnerBenefitNote?: string;
+  executionDirections?: string;
+  formTips?: string[];
   isPrimaryAnchorCandidate?: boolean;
   isFinisherCandidate?: boolean;
   defaultSets?: number;
   defaultReps?: string;
+  mainLiftCategory?: 'BENCH' | 'SQUAT' | 'DEADLIFT' | 'OTHER';
 }
 
 export type PairingType =
@@ -63,15 +66,18 @@ export interface SupersetPair {
   exerciseBId: string;
   pairingType: PairingType;
   rationale: string;
+  executionNotes?: string;
   buddyFriendly: boolean;
   recommendedSplits: SessionSplitType[];
 }
 
 export type PlanScheduleFamily = 'UPPER_LOWER' | 'PPL';
 
-export type UpperLowerVariant = 'HYBRID_SOLO_BUDDY' | 'BUDDY_ONLY' | 'SOLO_ONLY';
+export type UpperLowerVariant = 'BUDDY_ONLY' | 'HYBRID_SOLO_BUDDY' | 'SOLO_ONLY';
 
 export type SessionsPerWeek = 2 | 3 | 4;
+
+export type EquipmentPreferenceWeight = 1 | 2 | 3 | 4 | 5;
 
 export interface PlanConfig {
   id: string;
@@ -81,6 +87,8 @@ export interface PlanConfig {
   sessionsPerWeek: SessionsPerWeek;
   targetSupersetsPerSession: 2 | 3 | 4;
   targetFinishersPerSession: 1 | 2;
+  weeklySetCeilingOverride?: number;
+  equipmentPreferences?: Record<EquipmentCategory, EquipmentPreferenceWeight>;
   updatedAt: string;
 }
 
@@ -105,12 +113,12 @@ export interface LoggedSet {
 
 export interface SessionSupersetBlock {
   id: string;
-  supersetPairId?: string; // Optional if custom-built on the day
+  supersetPairId?: string;
   customName?: string;
   exerciseAId: string;
   exerciseBId: string;
-  executionMode: SupersetExecutionMode; // PAIRED (A1/A2) or SPLIT_STANDALONE (A then B)
-  targetSets: number;
+  executionMode: SupersetExecutionMode;
+  targetSets: 2 | 3 | 4;
   setsA: LoggedSet[];
   setsB: LoggedSet[];
 }
@@ -124,9 +132,11 @@ export interface SessionFinisherBlock {
   completedRounds: number;
 }
 
+export type SessionLifecycleStatus = 'PLANNED' | 'ACTIVE' | 'COMPLETED';
+
 export interface WorkoutSession {
   id: string;
-  date: string; // ISO string
+  date: string; // ISO string (YYYY-MM-DD or full ISO)
   splitType: SessionSplitType;
   primaryLiftId: string;
   primaryLiftSets: LoggedSet[];
@@ -134,7 +144,28 @@ export interface WorkoutSession {
   finishers: SessionFinisherBlock[];
   totalAxialLoad: number;
   notes?: string;
-  status: 'PLANNED' | 'COMPLETED';
+  includeInProjectedLoad?: boolean;
+  status: SessionLifecycleStatus;
+}
+
+/**
+ * 4-Color Exercise Evaluation Status:
+ * - OPTIMAL (Green): Meets all session & history rules
+ * - WRONG_STYLE (Blue info): Exercise movement pattern doesn't match the session split
+ * - PROJECTED_OVERWORK (Orange warning): Exceeds 48h recovery or 7d volume when combined with history + prior planned sessions
+ * - INTRA_SESSION_OVERWORK (Red error): Overworked inside the current session (axial > 4, competing superset, or primary overlap)
+ */
+export type ExerciseSlotHealth =
+  | 'OPTIMAL'
+  | 'WRONG_STYLE'
+  | 'PROJECTED_OVERWORK'
+  | 'INTRA_SESSION_OVERWORK';
+
+export interface ExerciseSlotEvaluation {
+  health: ExerciseSlotHealth;
+  headline: string;
+  reasons: string[];
+  suggestedReplacementId?: string;
 }
 
 export type ValidationSeverity = 'INFO' | 'WARNING' | 'CRITICAL';
@@ -146,7 +177,8 @@ export interface SafeguardAlert {
     | 'COMPETING_SUPERSET'
     | 'INTRA_SESSION_OVERLAP'
     | 'ROLLING_48H_RECOVERY'
-    | 'WEEKLY_VOLUME_IMBALANCE';
+    | 'WEEKLY_VOLUME_IMBALANCE'
+    | 'WRONG_SPLIT_STYLE';
   severity: ValidationSeverity;
   title: string;
   message: string;
@@ -157,9 +189,11 @@ export interface SafeguardAlert {
 export interface MuscleVolumeSummary {
   muscle: MuscleGroup;
   sets48h: number;
-  sets7d: number;
-  sets14d: number;
-  plannedSessionSets: number;
-  status7d: 'UNDER' | 'OPTIMAL' | 'HIGH' | 'OVERTRAINING_RISK';
+  sets7dCurrent: number;
+  sets7dProjected: number;
+  sets14dProjected: number;
+  plannedFutureSets: number;
+  statusCurrent: 'UNDER' | 'OPTIMAL' | 'HIGH' | 'OVERTRAINING_RISK';
+  statusProjected: 'UNDER' | 'OPTIMAL' | 'HIGH' | 'OVERTRAINING_RISK';
   recovery48hFlag: boolean;
 }

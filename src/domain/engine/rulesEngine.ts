@@ -1,9 +1,11 @@
 import {
   Exercise,
+  ExerciseSlotEvaluation,
   MuscleGroup,
   MuscleVolumeSummary,
   PlanConfig,
   SafeguardAlert,
+  SessionSplitType,
   SupersetPair,
   WorkoutSession,
 } from '../models/types';
@@ -42,10 +44,79 @@ export const MUSCLE_LABELS: Record<MuscleGroup, string> = {
   CORE: 'Core / Pelvic Stabilizers',
 };
 
+const LOWER_MUSCLES: MuscleGroup[] = ['QUADS', 'HAMSTRINGS', 'GLUTES', 'CALVES'];
+const PUSH_MUSCLES: MuscleGroup[] = [
+  'CHEST',
+  'CHEST_UPPER',
+  'ANTERIOR_DELT',
+  'LATERAL_DELT',
+  'TRICEPS',
+];
+const PULL_MUSCLES: MuscleGroup[] = [
+  'LATS',
+  'UPPER_BACK',
+  'REAR_DELT',
+  'BICEPS',
+];
+
 /**
- * Calculates total axial load score for a session.
- * Each unique exercise in the session contributes its axialLoadScore.
+ * Checks whether an exercise's style fits the session's split plane.
+ * Note: Lower days explicitly allow Lat Pulldown, Core Decompression, and Bicep Hammer Curls (for Lunge station).
  */
+export function isExerciseStyleAlignedWithSplit(
+  exercise: Exercise,
+  splitType: SessionSplitType
+): boolean {
+  if (
+    exercise.pattern === 'CORE_DECOMPRESSION' ||
+    exercise.pattern === 'LOCOMOTION'
+  ) {
+    return true;
+  }
+
+  const isLowerSplit =
+    splitType === 'BUDDY_LOWER' ||
+    splitType === 'SOLO_LOWER' ||
+    splitType === 'PPL_LEGS';
+  if (isLowerSplit) {
+    if (exercise.primaryMuscles.some((m) => LOWER_MUSCLES.includes(m))) {
+      return true;
+    }
+    // Lower days intentionally allow vertical pull (spinal decompression) and hammer curls (lunge pairing)
+    if (
+      exercise.id === 'lat_pulldown_neutral' ||
+      exercise.id === 'db_hammer_curls'
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  if (splitType === 'BUDDY_UPPER' || splitType === 'SOLO_UPPER') {
+    return exercise.primaryMuscles.some(
+      (m) => PUSH_MUSCLES.includes(m) || PULL_MUSCLES.includes(m)
+    );
+  }
+
+  if (splitType === 'PPL_PUSH') {
+    // Allow antagonist row in Push if paired, or push muscles
+    return (
+      exercise.primaryMuscles.some((m) => PUSH_MUSCLES.includes(m)) ||
+      exercise.id === 'machine_row_narrow' ||
+      exercise.id === 'rope_face_pull'
+    );
+  }
+
+  if (splitType === 'PPL_PULL') {
+    return (
+      exercise.primaryMuscles.some((m) => PULL_MUSCLES.includes(m)) ||
+      exercise.id === 'cable_lateral_raise'
+    );
+  }
+
+  return true;
+}
+
 export function calculateSessionAxialLoad(
   session: WorkoutSession,
   exerciseMap: Map<string, Exercise>
@@ -71,10 +142,6 @@ export function calculateSessionAxialLoad(
   return total;
 }
 
-/**
- * Computes how many working sets each muscle group receives from a single session.
- * Primary muscles count as 1.0 set per set; secondary muscles count as 0.5 set per set.
- */
 export function calculateSessionMuscleSets(
   session: WorkoutSession,
   exerciseMap: Map<string, Exercise>
@@ -97,8 +164,10 @@ export function calculateSessionMuscleSets(
   addExerciseSets(session.primaryLiftId, session.primaryLiftSets.length || 4);
 
   for (const ss of session.supersets) {
-    addExerciseSets(ss.exerciseAId, ss.setsA.length || ss.targetSets || 3);
-    addExerciseSets(ss.exerciseBId, ss.setsB.length || ss.targetSets || 3);
+    const countA = ss.targetSets || ss.setsA.length || 3;
+    const countB = ss.targetSets || ss.setsB.length || 3;
+    addExerciseSets(ss.exerciseAId, countA);
+    addExerciseSets(ss.exerciseBId, countB);
   }
 
   for (const fin of session.finishers) {
@@ -108,12 +177,20 @@ export function calculateSessionMuscleSets(
   return tally;
 }
 
+export function getWeeklySetCeiling(plan: PlanConfig): number {
+  if (plan.weeklySetCeilingOverride && plan.weeklySetCeilingOverride > 0) {
+    return plan.weeklySetCeilingOverride;
+  }
+  return plan.sessionsPerWeek === 2 ? 10 : plan.sessionsPerWeek === 3 ? 13 : 15;
+}
+
 /**
- * Computes rolling 48h, 7-day, and 14-day muscle volume plus current draft session sets.
+ * Computes Current Loading (from COMPLETED history in last 7 days) AND
+ * Projected Loading (after INCLUDED planned/active sessions are executed).
  */
 export function computeMuscleVolumeSummaries(
-  draftSession: WorkoutSession | null,
-  historicalSessions: WorkoutSession[],
+  futureSessions: WorkoutSession[],
+  completedSessions: WorkoutSession[],
   exercises: Exercise[],
   plan: PlanConfig,
   now: Date = new Date()
@@ -127,75 +204,346 @@ export function computeMuscleVolumeSummaries(
     MuscleGroup,
     number
   >;
-  const totals7d = Object.fromEntries(ALL_MUSCLE_GROUPS.map((m) => [m, 0])) as Record<
-    MuscleGroup,
-    number
-  >;
-  const totals14d = Object.fromEntries(ALL_MUSCLE_GROUPS.map((m) => [m, 0])) as Record<
-    MuscleGroup,
-    number
-  >;
+  const totals7dCurrent = Object.fromEntries(
+    ALL_MUSCLE_GROUPS.map((m) => [m, 0])
+  ) as Record<MuscleGroup, number>;
+  const totals14dCurrent = Object.fromEntries(
+    ALL_MUSCLE_GROUPS.map((m) => [m, 0])
+  ) as Record<MuscleGroup, number>;
 
-  for (const session of historicalSessions) {
-    if (draftSession && session.id === draftSession.id) continue;
+  for (const session of completedSessions) {
+    if (session.status !== 'COMPLETED') continue;
     const ageMs = now.getTime() - new Date(session.date).getTime();
     if (ageMs < 0 || ageMs > ms14d) continue;
 
     const sessionSets = calculateSessionMuscleSets(session, exerciseMap);
     for (const m of ALL_MUSCLE_GROUPS) {
       const val = sessionSets[m] || 0;
-      totals14d[m] += val;
-      if (ageMs <= ms7d) totals7d[m] += val;
+      totals14dCurrent[m] += val;
+      if (ageMs <= ms7d) totals7dCurrent[m] += val;
       if (ageMs <= ms48h) totals48h[m] += val;
     }
   }
 
-  const plannedSets = draftSession
-    ? calculateSessionMuscleSets(draftSession, exerciseMap)
-    : (Object.fromEntries(ALL_MUSCLE_GROUPS.map((m) => [m, 0])) as Record<
-        MuscleGroup,
-        number
-      >);
+  const plannedTotals = Object.fromEntries(
+    ALL_MUSCLE_GROUPS.map((m) => [m, 0])
+  ) as Record<MuscleGroup, number>;
 
-  // Scale weekly optimal ceiling slightly by sessionsPerWeek (2, 3, or 4)
-  const weeklyCeiling = plan.sessionsPerWeek === 2 ? 10 : plan.sessionsPerWeek === 3 ? 13 : 15;
+  for (const future of futureSessions) {
+    if (future.includeInProjectedLoad === false) continue;
+    const fSets = calculateSessionMuscleSets(future, exerciseMap);
+    for (const m of ALL_MUSCLE_GROUPS) {
+      plannedTotals[m] += fSets[m] || 0;
+    }
+  }
+
+  const weeklyCeiling = getWeeklySetCeiling(plan);
   const weeklyFloor = plan.sessionsPerWeek === 2 ? 3 : 4;
+
+  const classify = (sets: number): MuscleVolumeSummary['statusCurrent'] => {
+    if (sets > weeklyCeiling) return 'OVERTRAINING_RISK';
+    if (sets > weeklyCeiling - 3) return 'HIGH';
+    if (sets < weeklyFloor) return 'UNDER';
+    return 'OPTIMAL';
+  };
 
   return ALL_MUSCLE_GROUPS.map((muscle) => {
     const sets48h = Math.round(totals48h[muscle] * 10) / 10;
-    const sets7d = Math.round((totals7d[muscle] + plannedSets[muscle]) * 10) / 10;
-    const sets14d = Math.round((totals14d[muscle] + plannedSets[muscle]) * 10) / 10;
-    const plannedSessionSets = Math.round(plannedSets[muscle] * 10) / 10;
-
-    let status7d: MuscleVolumeSummary['status7d'] = 'OPTIMAL';
-    if (sets7d > weeklyCeiling) {
-      status7d = 'OVERTRAINING_RISK';
-    } else if (sets7d > weeklyCeiling - 3) {
-      status7d = 'HIGH';
-    } else if (sets7d < weeklyFloor) {
-      status7d = 'UNDER';
-    }
+    const sets7dCurrent = Math.round(totals7dCurrent[muscle] * 10) / 10;
+    const plannedFutureSets = Math.round(plannedTotals[muscle] * 10) / 10;
+    const sets7dProjected =
+      Math.round((totals7dCurrent[muscle] + plannedTotals[muscle]) * 10) / 10;
+    const sets14dProjected =
+      Math.round((totals14dCurrent[muscle] + plannedTotals[muscle]) * 10) / 10;
 
     return {
       muscle,
       sets48h,
-      sets7d,
-      sets14d,
-      plannedSessionSets,
-      status7d,
+      sets7dCurrent,
+      sets7dProjected,
+      sets14dProjected,
+      plannedFutureSets,
+      statusCurrent: classify(sets7dCurrent),
+      statusProjected: classify(sets7dProjected),
       recovery48hFlag: sets48h > 6,
     };
   });
 }
 
 /**
- * Evaluates all 4 rules engine safeguards on a draft session:
- * - Rule 1: Axial Load Ceiling (> 4)
- * - Rule 2A: Non-Competing / Antagonist Superset Mandate (within a superset pair)
- * - Rule 2B: Intra-Session Primary + Superset Overlap (e.g. Bench Press + Incline DB Press)
- * - Rule 3: Rolling 48-Hour Recovery Lookback (> 6 sets in past 48h)
- * - Rule 4: Rolling Weekly / Fortnightly Muscle Volume Over-Concentration
+ * Evaluates a specific exercise slot within a session against:
+ * 1. RED (INTRA_SESSION_OVERWORK): Overworked in this session (Axial > 4, competing superset partner, grip >= 3, or primary overlap)
+ * 2. ORANGE (PROJECTED_OVERWORK): Overworked when history + earlier planned sessions are executed (48h recovery > 6 sets or projected weekly sets > ceiling)
+ * 3. BLUE (WRONG_STYLE): Movement plane doesn't match the session split style
+ * 4. GREEN (OPTIMAL): Meets all rules
+ * Also computes a `suggestedReplacementId` so the 1-tap Quick Switch button can swap it immediately.
  */
+export function evaluateExerciseSlot(params: {
+  exerciseId: string;
+  slotRole: 'PRIMARY' | 'SUPERSET_A' | 'SUPERSET_B' | 'FINISHER';
+  partnerExerciseId?: string;
+  session: WorkoutSession;
+  priorSessions: WorkoutSession[]; // Completed + earlier planned sessions
+  exercises: Exercise[];
+  plan: PlanConfig;
+}): ExerciseSlotEvaluation {
+  const {
+    exerciseId,
+    slotRole,
+    partnerExerciseId,
+    session,
+    priorSessions,
+    exercises,
+    plan,
+  } = params;
+
+  const exerciseMap = new Map(exercises.map((e) => [e.id, e]));
+  const ex = exerciseMap.get(exerciseId);
+  if (!ex) {
+    return {
+      health: 'OPTIMAL',
+      headline: 'Valid Selection',
+      reasons: [],
+    };
+  }
+
+  const redReasons: string[] = [];
+  const orangeReasons: string[] = [];
+  const blueReasons: string[] = [];
+
+  // 1. Check Intra-Session Red Errors
+  const totalAxial = calculateSessionAxialLoad(session, exerciseMap);
+  if (totalAxial > 4 && ex.axialLoadScore >= 2 && slotRole !== 'PRIMARY') {
+    redReasons.push(
+      `Session Axial Load is ${totalAxial}/4 — ${ex.name} (Axial ${ex.axialLoadScore}) overloads spinal compression after the primary lift.`
+    );
+  }
+
+  const primaryEx = exerciseMap.get(session.primaryLiftId);
+  if (slotRole !== 'PRIMARY' && primaryEx) {
+    const duplicatePress =
+      primaryEx.pattern === 'HORIZONTAL_PUSH' &&
+      (ex.pattern === 'HORIZONTAL_PUSH' || ex.pattern === 'VERTICAL_PUSH') &&
+      ex.jointStressLevel >= 2;
+    const duplicateLowerCompound =
+      (primaryEx.pattern === 'KNEE_DOMINANT' || primaryEx.pattern === 'HIP_HINGE') &&
+      (ex.pattern === 'KNEE_DOMINANT' || ex.pattern === 'HIP_HINGE') &&
+      ex.axialLoadScore >= 2;
+
+    if (duplicatePress) {
+      redReasons.push(
+        `Stacks heavy compound pressing with primary lift (${primaryEx.name}). High shoulder/tricep shear.`
+      );
+    }
+    if (duplicateLowerCompound) {
+      redReasons.push(
+        `Stacks heavy compound lower hinge/squat with primary lift (${primaryEx.name}).`
+      );
+    }
+  }
+
+  if (
+    (slotRole === 'SUPERSET_A' || slotRole === 'SUPERSET_B') &&
+    partnerExerciseId
+  ) {
+    const partnerEx = exerciseMap.get(partnerExerciseId);
+    if (partnerEx) {
+      const sharedPrimary = ex.primaryMuscles.filter((m) =>
+        partnerEx.primaryMuscles.includes(m)
+      );
+      const doublePress =
+        (ex.pattern === 'HORIZONTAL_PUSH' || ex.pattern === 'VERTICAL_PUSH') &&
+        (partnerEx.pattern === 'HORIZONTAL_PUSH' ||
+          partnerEx.pattern === 'VERTICAL_PUSH');
+      const doublePull =
+        (ex.pattern === 'HORIZONTAL_PULL' || ex.pattern === 'VERTICAL_PULL') &&
+        (partnerEx.pattern === 'HORIZONTAL_PULL' ||
+          partnerEx.pattern === 'VERTICAL_PULL');
+
+      if (sharedPrimary.length > 0 || doublePress) {
+        redReasons.push(
+          `Competes directly with superset partner (${partnerEx.name}) for ${
+            sharedPrimary.map((m) => MUSCLE_LABELS[m]).join(', ') ||
+            'pressing movers'
+          }.`
+        );
+      }
+      if (doublePull || ex.gripTax + partnerEx.gripTax >= 3) {
+        redReasons.push(
+          `High grip/forearm clash (${ex.gripTax + partnerEx.gripTax} grip tax) with ${partnerEx.name}.`
+        );
+      }
+    }
+  }
+
+  // 2. Check Projected / 48h History Orange Warnings
+  const refDate = new Date(session.date);
+  const ms48h = 48 * 60 * 60 * 1000;
+  const ms7d = 7 * 24 * 60 * 60 * 1000;
+  const weeklyCeiling = getWeeklySetCeiling(plan);
+
+  const sets48hByMuscle = Object.fromEntries(
+    ALL_MUSCLE_GROUPS.map((m) => [m, 0])
+  ) as Record<MuscleGroup, number>;
+  const sets7dByMuscle = Object.fromEntries(
+    ALL_MUSCLE_GROUPS.map((m) => [m, 0])
+  ) as Record<MuscleGroup, number>;
+
+  for (const p of priorSessions) {
+    if (p.id === session.id) continue;
+    if (p.status !== 'COMPLETED' && p.includeInProjectedLoad === false) continue;
+    const diffMs = refDate.getTime() - new Date(p.date).getTime();
+    if (diffMs < 0 || diffMs > ms7d) continue;
+
+    const pSets = calculateSessionMuscleSets(p, exerciseMap);
+    for (const m of ALL_MUSCLE_GROUPS) {
+      sets7dByMuscle[m] += pSets[m] || 0;
+      if (diffMs <= ms48h) {
+        sets48hByMuscle[m] += pSets[m] || 0;
+      }
+    }
+  }
+
+  const currentSessionSets = calculateSessionMuscleSets(session, exerciseMap);
+  for (const m of ex.primaryMuscles) {
+    if (sets48hByMuscle[m] > 6) {
+      orangeReasons.push(
+        `${MUSCLE_LABELS[m]} already has ${Math.round(sets48hByMuscle[m])} sets within 48h prior to this session.`
+      );
+    }
+    const projected7d = sets7dByMuscle[m] + (currentSessionSets[m] || 0);
+    if (projected7d > weeklyCeiling) {
+      orangeReasons.push(
+        `Projected 7-day volume for ${MUSCLE_LABELS[m]} reaches ${Math.round(projected7d)} sets (ceiling: ${weeklyCeiling}).`
+      );
+    }
+  }
+
+  // 3. Check Split Style Alignment (Blue Info)
+  if (!isExerciseStyleAlignedWithSplit(ex, session.splitType)) {
+    blueReasons.push(
+      `${ex.name} targets ${ex.primaryMuscles
+        .map((m) => MUSCLE_LABELS[m])
+        .join(', ')}, which is outside the typical ${session.splitType.replace(
+        '_',
+        ' '
+      )} focus.`
+    );
+  }
+
+  let health: ExerciseSlotEvaluation['health'] = 'OPTIMAL';
+  let headline = 'Optimal Fit';
+  let reasons: string[] = [];
+
+  if (redReasons.length > 0) {
+    health = 'INTRA_SESSION_OVERWORK';
+    headline = 'Intra-Session Conflict';
+    reasons = redReasons;
+  } else if (orangeReasons.length > 0) {
+    health = 'PROJECTED_OVERWORK';
+    headline = 'Projected Volume / 48h Fatigue';
+    reasons = orangeReasons;
+  } else if (blueReasons.length > 0) {
+    health = 'WRONG_STYLE';
+    headline = 'Off-Split Style (Allowed)';
+    reasons = blueReasons;
+  }
+
+  let suggestedReplacementId: string | undefined;
+  if (health !== 'OPTIMAL') {
+    suggestedReplacementId = findBestReplacementExercise({
+      currentExerciseId: exerciseId,
+      slotRole,
+      partnerExerciseId,
+      session,
+      priorSessions,
+      exercises,
+      plan,
+    });
+  }
+
+  return {
+    health,
+    headline,
+    reasons,
+    suggestedReplacementId,
+  };
+}
+
+/**
+ * Finds the best replacement exercise for Quick Switch that resolves Red/Orange/Blue flags.
+ */
+export function findBestReplacementExercise(params: {
+  currentExerciseId: string;
+  slotRole: 'PRIMARY' | 'SUPERSET_A' | 'SUPERSET_B' | 'FINISHER';
+  partnerExerciseId?: string;
+  session: WorkoutSession;
+  priorSessions: WorkoutSession[];
+  exercises: Exercise[];
+  plan: PlanConfig;
+}): string | undefined {
+  const {
+    currentExerciseId,
+    slotRole,
+    partnerExerciseId,
+    session,
+    exercises,
+    plan,
+  } = params;
+
+  const usedIds = new Set<string>([session.primaryLiftId]);
+  session.supersets.forEach((ss) => {
+    usedIds.add(ss.exerciseAId);
+    usedIds.add(ss.exerciseBId);
+  });
+  session.finishers.forEach((f) => usedIds.add(f.exerciseId));
+
+  const candidates = exercises.filter((cand) => {
+    if (cand.id === currentExerciseId) return false;
+    if (slotRole === 'PRIMARY') return Boolean(cand.isPrimaryAnchorCandidate);
+    if (slotRole === 'FINISHER') return Boolean(cand.isFinisherCandidate);
+    return !cand.isFinisherCandidate;
+  });
+
+  const exerciseMap = new Map(exercises.map((e) => [e.id, e]));
+  const partnerEx = partnerExerciseId
+    ? exerciseMap.get(partnerExerciseId)
+    : undefined;
+
+  let bestId: string | undefined;
+  let bestScore = -999;
+
+  for (const cand of candidates) {
+    let score = 0;
+    if (!usedIds.has(cand.id)) score += 20;
+    if (isExerciseStyleAlignedWithSplit(cand, session.splitType)) score += 35;
+    if (cand.axialLoadScore === 0) score += 15;
+    if (cand.jointStressLevel === 1) score += 10;
+
+    // Equipment preference boost from Settings
+    const eqWeight = plan.equipmentPreferences?.[cand.equipment] ?? 3;
+    score += eqWeight * 2;
+
+    if (partnerEx) {
+      const sharedPrimary = cand.primaryMuscles.some((m) =>
+        partnerEx.primaryMuscles.includes(m)
+      );
+      if (!sharedPrimary) score += 25;
+      else score -= 40;
+
+      if (cand.gripTax + partnerEx.gripTax <= 2) score += 15;
+      else score -= 30;
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestId = cand.id;
+    }
+  }
+
+  return bestId;
+}
+
 export function evaluateSessionSafeguards(
   session: WorkoutSession,
   historicalSessions: WorkoutSession[],
@@ -206,7 +554,6 @@ export function evaluateSessionSafeguards(
   const alerts: SafeguardAlert[] = [];
   const exerciseMap = new Map(exercises.map((e) => [e.id, e]));
 
-  // === RULE 1: AXIAL LOAD CEILING (> 4) ===
   const axialLoad = calculateSessionAxialLoad(session, exerciseMap);
   if (axialLoad > 4) {
     alerts.push({
@@ -217,13 +564,12 @@ export function evaluateSessionSafeguards(
       message:
         'High axial loading detected following primary lift. Recommend substituting secondary hinges (e.g., Barbell RDL) with supported knee flexion (e.g., Seated Machine Hamstring Curl) or supported pulls.',
       recommendation:
-        'Swap Barbell RDL or heavy axial accessories for Seated Machine Hamstring Curl, Chest-Supported Row, or Neutral-Grip Lat Pulldown.',
+        'Use Quick Switch on heavy axial accessories to swap in Seated Hamstring Curl or Neutral-Grip Lat Pulldown.',
     });
   }
 
   const primaryEx = exerciseMap.get(session.primaryLiftId);
 
-  // === RULE 2A & 2B: SUPERSET PAIRING & INTRA-SESSION PRIMARY OVERLAP ===
   for (let i = 0; i < session.supersets.length; i++) {
     const ss = session.supersets[i];
     const exA = exerciseMap.get(ss.exerciseAId);
@@ -231,8 +577,6 @@ export function evaluateSessionSafeguards(
     if (!exA || !exB) continue;
 
     const label = ss.customName || `Superset #${i + 1}`;
-
-    // Check competing primary muscles inside the superset when in PAIRED mode
     const sharedPrimary = exA.primaryMuscles.filter((m) =>
       exB.primaryMuscles.includes(m)
     );
@@ -255,7 +599,7 @@ export function evaluateSessionSafeguards(
         message: `${exA.name} and ${exB.name} compete for the same primary movers or compound recovery capacity.`,
         affectedMuscles: sharedPrimary,
         recommendation:
-          'Pair an antagonist or peripheral movement instead (e.g., Horizontal Pull + Cable Flye, or Leg Curl + Calf Raise).',
+          'Click Quick Switch on either exercise to pair an antagonist movement instead.',
       });
     }
 
@@ -271,38 +615,38 @@ export function evaluateSessionSafeguards(
       });
     }
 
-    // Intra-session overlap with Primary Anchor Lift (e.g., Bench Press + Incline DB Press)
     if (primaryEx) {
       for (const subEx of [exA, exB]) {
         const sameCompoundPressPattern =
           primaryEx.pattern === 'HORIZONTAL_PUSH' &&
-          (subEx.pattern === 'HORIZONTAL_PUSH' || subEx.pattern === 'VERTICAL_PUSH') &&
+          (subEx.pattern === 'HORIZONTAL_PUSH' ||
+            subEx.pattern === 'VERTICAL_PUSH') &&
           subEx.jointStressLevel >= 2;
         const sameCompoundLowerPattern =
-          (primaryEx.pattern === 'KNEE_DOMINANT' || primaryEx.pattern === 'HIP_HINGE') &&
-          (subEx.pattern === 'KNEE_DOMINANT' || subEx.pattern === 'HIP_HINGE') &&
+          (primaryEx.pattern === 'KNEE_DOMINANT' ||
+            primaryEx.pattern === 'HIP_HINGE') &&
+          (subEx.pattern === 'KNEE_DOMINANT' ||
+            subEx.pattern === 'HIP_HINGE') &&
           subEx.axialLoadScore >= 2;
 
         if (sameCompoundPressPattern || sameCompoundLowerPattern) {
           alerts.push({
             id: `rule_intra_overlap_${ss.id}_${subEx.id}`,
             rule: 'INTRA_SESSION_OVERLAP',
-            severity: 'WARNING',
+            severity: 'CRITICAL',
             title: `Redundant Compound Stress: ${primaryEx.name} + ${subEx.name}`,
             message: `Combining primary anchor ${primaryEx.name} with compound ${subEx.name} in ${label} stacks heavy joint/tricep/spinal fatigue in a single session.`,
             affectedMuscles: subEx.primaryMuscles,
-            recommendation: sameCompoundPressPattern
-              ? 'Use Low-to-High Cable Flyes or Single-Arm Cable Lateral Raises to stimulate upper chest/delts without compounding pressing joint shear.'
-              : 'Use Seated Machine Hamstring Curls or Dumbbell Walking Lunges to reduce spinal overlap.',
+            recommendation:
+              'Use Quick Switch to replace with an isolation movement (e.g., Low-to-High Cable Fly or Seated Hamstring Curl).',
           });
         }
       }
     }
   }
 
-  // === RULE 3 & 4: ROLLING 48H RECOVERY & 7D/14D VOLUME CHECK ===
   const summaries = computeMuscleVolumeSummaries(
-    session,
+    [session],
     historicalSessions,
     exercises,
     plan,
@@ -310,29 +654,14 @@ export function evaluateSessionSafeguards(
   );
 
   for (const s of summaries) {
-    if (s.recovery48hFlag && s.plannedSessionSets >= 2) {
+    if (s.recovery48hFlag && s.plannedFutureSets >= 2) {
       alerts.push({
         id: `rule_48h_${s.muscle}`,
         rule: 'ROLLING_48H_RECOVERY',
         severity: 'WARNING',
         title: `48h Recovery Flag: ${MUSCLE_LABELS[s.muscle]} (${s.sets48h} sets in last 48h)`,
-        message: `${MUSCLE_LABELS[s.muscle]} accumulated >6 working sets within the past 48 hours and this session adds ${s.plannedSessionSets} more sets.`,
+        message: `${MUSCLE_LABELS[s.muscle]} accumulated >6 working sets within the past 48 hours and this session adds ${s.plannedFutureSets} more sets.`,
         affectedMuscles: [s.muscle],
-        recommendation:
-          'Restrict heavy compound pressing/pulling on this muscle group; shift to lengthened-state isolation (Low-to-High Cable Flyes, Long-Rope Face Pulls, or Cable Lateral Raises).',
-      });
-    }
-
-    if (s.status7d === 'OVERTRAINING_RISK' && s.plannedSessionSets > 0) {
-      alerts.push({
-        id: `rule_7d_over_${s.muscle}`,
-        rule: 'WEEKLY_VOLUME_IMBALANCE',
-        severity: 'WARNING',
-        title: `High Weekly Concentration: ${MUSCLE_LABELS[s.muscle]} (${s.sets7d} sets / 7d)`,
-        message: `Projected 7-day volume for ${MUSCLE_LABELS[s.muscle]} is ${s.sets7d} sets (14-day: ${s.sets14d} sets), exceeding your optimal weekly ceiling.`,
-        affectedMuscles: [s.muscle],
-        recommendation:
-          'Swap one superset targeting this region for an under-stimulated muscle group to keep weekly and fortnightly volume balanced.',
       });
     }
   }
@@ -340,9 +669,6 @@ export function evaluateSessionSafeguards(
   return alerts;
 }
 
-/**
- * Ranks curated supersets for a session by compatibility, split fit, and 7-day volume balance.
- */
 export function rankSupersetsForSession(
   session: WorkoutSession,
   curatedSupersets: SupersetPair[],
@@ -356,7 +682,7 @@ export function rankSupersetsForSession(
 }> {
   const exerciseMap = new Map(exercises.map((e) => [e.id, e]));
   const summaries = computeMuscleVolumeSummaries(
-    session,
+    [session],
     historicalSessions,
     exercises,
     plan
@@ -382,7 +708,8 @@ export function rankSupersetsForSession(
       }
 
       if (
-        (session.splitType === 'BUDDY_UPPER' || session.splitType === 'BUDDY_LOWER') &&
+        (session.splitType === 'BUDDY_UPPER' ||
+          session.splitType === 'BUDDY_LOWER') &&
         ss.buddyFriendly
       ) {
         score += 15;
@@ -399,12 +726,15 @@ export function rankSupersetsForSession(
       for (const m of targetMuscles) {
         const vol = summaryMap.get(m);
         if (!vol) continue;
-        if (vol.status7d === 'UNDER') {
+        if (vol.statusProjected === 'UNDER') {
           score += 12;
           if (!tags.includes(`Boosts ${MUSCLE_LABELS[m]}`)) {
             tags.push(`Boosts ${MUSCLE_LABELS[m]}`);
           }
-        } else if (vol.status7d === 'OVERTRAINING_RISK' || vol.recovery48hFlag) {
+        } else if (
+          vol.statusProjected === 'OVERTRAINING_RISK' ||
+          vol.recovery48hFlag
+        ) {
           score -= 20;
           tags.push(`High ${MUSCLE_LABELS[m]} Fatigue`);
         }
