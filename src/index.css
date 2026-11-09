@@ -18,3 +18,32 @@
     display: none;
   }
 }
+
+/* Set logging rows (CurrentSessionView): one line when the row is wide
+   enough, otherwise steppers on top and a full-width Done button below. */
+@layer components {
+  .set-row-wrap {
+    container-type: inline-size;
+  }
+  .set-row {
+    display: grid;
+    align-items: center;
+    gap: 0.5rem;
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: 'done weight reps';
+  }
+  .set-row-done-label {
+    display: none;
+  }
+  @container (max-width: 279px) {
+    .set-row {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-areas:
+        'weight reps'
+        'done done';
+    }
+    .set-row-done-label {
+      display: inline;
+    }
+  }
+}

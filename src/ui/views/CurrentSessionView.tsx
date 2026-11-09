@@ -363,109 +363,94 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
   };
 
   // Mobile-friendly Set Row with +/- touch steppers and large Done button
+  // Mobile-friendly set row. Uses a container query (see .set-row in
+  // index.css): one line when there is room, otherwise the steppers sit side
+  // by side with a full-width Done button underneath. Never overflows.
+  const renderStepper = (
+    label: string,
+    value: number,
+    step: number,
+    min: number,
+    onValue: (v: number) => void,
+    area: 'weight' | 'reps'
+  ) => (
+    <div className="flex min-w-0 items-center gap-1" style={{ gridArea: area }}>
+      <button
+        type="button"
+        onClick={() => onValue(Math.max(min, +(value - step).toFixed(2)))}
+        className="flex h-11 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-800 active:bg-zinc-700 text-zinc-200"
+        aria-label={`Decrease ${label}`}
+      >
+        <Minus className="h-3.5 w-3.5" />
+      </button>
+      <label className="min-w-0 flex-1 text-center">
+        <input
+          type="number"
+          inputMode="decimal"
+          step={step}
+          value={value}
+          onChange={(e) => onValue(Number(e.target.value))}
+          className="w-full min-w-0 bg-transparent text-center text-sm font-extrabold text-white focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        />
+        <span className="block text-[9px] uppercase text-zinc-500 -mt-1">
+          {label}
+        </span>
+      </label>
+      <button
+        type="button"
+        onClick={() => onValue(+(value + step).toFixed(2))}
+        className="flex h-11 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-800 active:bg-zinc-700 text-zinc-200"
+        aria-label={`Increase ${label}`}
+      >
+        <Plus className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+
   const renderTouchSetRow = (
     set: LoggedSet,
     onChange: (patch: Partial<LoggedSet>) => void
-  ) => {
-    return (
-      <div
-        key={set.setNumber}
-        className={`rounded-xl border p-2.5 flex items-center justify-between gap-2 transition ${
-          set.completed
-            ? 'border-emerald-500/50 bg-emerald-950/25'
-            : 'border-zinc-800 bg-zinc-950/80'
-        }`}
-      >
-        {/* Set Number Badge */}
-        <div
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-extrabold ${
-            set.completed
-              ? 'bg-emerald-500 text-zinc-950'
-              : 'bg-zinc-800 text-zinc-300'
-          }`}
-        >
-          S{set.setNumber}
-        </div>
-
-        {/* Weight Control */}
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() =>
-              onChange({ weightKg: Math.max(0, set.weightKg - 2.5) })
-            }
-            className="flex h-10 w-8 items-center justify-center rounded-lg bg-zinc-800 active:bg-zinc-700 text-zinc-200"
-            aria-label="Decrease weight"
-          >
-            <Minus className="h-3.5 w-3.5" />
-          </button>
-          <div className="text-center min-w-[54px]">
-            <input
-              type="number"
-              step="2.5"
-              value={set.weightKg}
-              onChange={(e) => onChange({ weightKg: Number(e.target.value) })}
-              className="w-14 bg-transparent text-center text-sm font-extrabold text-white focus:outline-none"
-            />
-            <div className="text-[9px] uppercase text-zinc-500 -mt-1">kg</div>
-          </div>
-          <button
-            type="button"
-            onClick={() => onChange({ weightKg: set.weightKg + 2.5 })}
-            className="flex h-10 w-8 items-center justify-center rounded-lg bg-zinc-800 active:bg-zinc-700 text-zinc-200"
-            aria-label="Increase weight"
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </button>
-        </div>
-
-        {/* Reps Control */}
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => onChange({ reps: Math.max(1, set.reps - 1) })}
-            className="flex h-10 w-8 items-center justify-center rounded-lg bg-zinc-800 active:bg-zinc-700 text-zinc-200"
-            aria-label="Decrease reps"
-          >
-            <Minus className="h-3.5 w-3.5" />
-          </button>
-          <div className="text-center min-w-[40px]">
-            <input
-              type="number"
-              value={set.reps}
-              onChange={(e) => onChange({ reps: Number(e.target.value) })}
-              className="w-10 bg-transparent text-center text-sm font-extrabold text-white focus:outline-none"
-            />
-            <div className="text-[9px] uppercase text-zinc-500 -mt-1">reps</div>
-          </div>
-          <button
-            type="button"
-            onClick={() => onChange({ reps: set.reps + 1 })}
-            className="flex h-10 w-8 items-center justify-center rounded-lg bg-zinc-800 active:bg-zinc-700 text-zinc-200"
-            aria-label="Increase reps"
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </button>
-        </div>
-
-        {/* Big Tap-to-Complete Button */}
+  ) => (
+    <div
+      key={set.setNumber}
+      className={`set-row-wrap rounded-xl border p-2 transition ${
+        set.completed
+          ? 'border-emerald-500/50 bg-emerald-950/25'
+          : 'border-zinc-800 bg-zinc-950/80'
+      }`}
+    >
+      <div className="set-row">
+        {/* Set number doubles as the big tap-to-complete button */}
         <button
           type="button"
           onClick={() => onChange({ completed: !set.completed })}
-          className={`flex h-11 px-3.5 shrink-0 items-center justify-center gap-1 rounded-xl text-xs font-extrabold active:scale-95 transition ${
+          aria-pressed={set.completed}
+          aria-label={`Set ${set.setNumber} ${set.completed ? 'done' : 'not done'}`}
+          style={{ gridArea: 'done' }}
+          className={`flex h-11 min-w-[48px] items-center justify-center gap-1 rounded-xl px-2.5 text-xs font-extrabold active:scale-95 transition ${
             set.completed
               ? 'bg-emerald-500 text-zinc-950 shadow-sm shadow-emerald-500/30'
               : 'bg-zinc-800 text-zinc-300'
           }`}
         >
-          <Check className="h-4 w-4 stroke-[3]" />
-          <span className="hidden xs:inline">
-            {set.completed ? 'Done' : 'Log'}
+          {set.completed ? (
+            <Check className="h-4 w-4 stroke-[3]" />
+          ) : (
+            <>
+              <Check className="h-3.5 w-3.5 stroke-[3] opacity-40" />
+              <span>S{set.setNumber}</span>
+            </>
+          )}
+          <span className="set-row-done-label">
+            {set.completed ? `Set ${set.setNumber} done` : '· tap when done'}
           </span>
         </button>
+
+        {renderStepper('kg', set.weightKg, 2.5, 0, (v) => onChange({ weightKg: v }), 'weight')}
+        {renderStepper('reps', set.reps, 1, 1, (v) => onChange({ reps: v }), 'reps')}
       </div>
-    );
-  };
+    </div>
+  );
 
   const primaryEval = evaluateExerciseSlot({
     exerciseId: activeSession.primaryLiftId,

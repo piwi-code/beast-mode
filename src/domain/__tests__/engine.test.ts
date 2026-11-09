@@ -15,7 +15,7 @@ import {
   evaluateSessionSafeguards,
 } from '../engine/rulesEngine';
 import { estimateOneRepMax } from '../engine/oneRepMax';
-import { WorkoutSession } from '../models/types';
+import { PlanConfig, WorkoutSession } from '../models/types';
 
 describe('Beast Mode Domain Engine', () => {
   it('defaults to a 4-session Upper/Lower plan with no buddy days and suggests Lower after Upper', () => {
@@ -37,13 +37,16 @@ describe('Beast Mode Domain Engine', () => {
 
     const suggestion = suggestNextSession(DEFAULT_PLAN_CONFIG, [prevSession]);
     expect(suggestion.splitType).toBe('LOWER');
-    expect(suggestion.recommendedPrimaryLiftId).toBe('bb_back_squat');
+    // No buddy days by default -> solo -> squat pattern without a spotter
+    expect(suggestion.withBuddy).toBe(false);
+    expect(suggestion.recommendedPrimaryLiftId).toBe('db_bulgarian_split_squat');
   });
 
   it('flip-flops Lower primary anchor between Back Squat and Deadlift across consecutive Lower sessions (including 2-day split)', () => {
     const buddy2DayPlan = {
       ...DEFAULT_PLAN_CONFIG,
       sessionsPerWeek: 2 as const,
+      buddyDays: [0, 1, 2, 3, 4, 5, 6] as PlanConfig['buddyDays'],
     };
 
     const lower1Squat: WorkoutSession = {
@@ -130,6 +133,7 @@ describe('Beast Mode Domain Engine', () => {
       {
         ...suggestion,
         splitType: 'LOWER',
+        withBuddy: true,
         recommendedPrimaryLiftId: 'bb_back_squat',
       },
       SEED_EXERCISES,

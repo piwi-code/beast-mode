@@ -41,7 +41,7 @@ Structured for 2, 3, or 4 sessions/week (`UPPER` $\leftrightarrow$ `LOWER`):
   - **Optional Superset 3 / 4**: Cable Lateral Raises + Tricep Rope Pushdowns or Postural Back work.
   - **Finisher**: High-Pulley Long-Rope Face Pulls for external rotation and postural reset.
 - **Lower Day (`LOWER`)**:
-  - **Primary**: Barbell Back Squat, flip-flopping with Deadlift on consecutive Lower sessions.
+  - **Primary**: Barbell Back Squat on buddy sessions, Dumbbell Bulgarian Split Squat on solo sessions; the squat pattern flip-flops with Deadlift on consecutive Lower sessions.
   - **Superset 1**: Seated Machine Hamstring Curls paired with Standing Deficit Machine Calf Raises (spares the spine after squats).
   - **Superset 2**: Neutral-Grip Lat Pulldown paired with Captain's Chair Knee Raises (decompresses the lumbar spine after heavy axial load).
   - **Finisher**: Turf Sled "Down & Back" rounds (with a buddy: Buddy A pushes/pulls while Buddy B times/rests).
@@ -49,8 +49,8 @@ Structured for 2, 3, or 4 sessions/week (`UPPER` $\leftrightarrow$ `LOWER`):
 ### Buddy vs. Solo Sessions (Spotter Availability)
 Buddy availability is **not** a split type. It is a per-session flag (`WorkoutSession.withBuddy`) that applies to every split, PPL included:
 - **Buddy days** (`PlanConfig.buddyDays`, set in Settings as weekdays): new sessions planned on these days start with `withBuddy: true`; all other days start solo. Any session can be ticked Buddy/Solo individually in the Plan and Current Session views.
-- **Buddy session** = a spotter is present. Spotter-dependent lifts (any barbell bench press, flagged `needsSpotter` on the exercise) are allowed and recommended, and partner-friendly superset stations (`buddyFriendly`) are ranked higher.
-- **Solo session** = no spotter. Auto-selection never picks a `needsSpotter` lift; it uses the exercise's `soloAlternativeId` instead (Barbell Bench $\rightarrow$ Dumbbell Bench). Superset defaults favour self-contained single-station pairs.
+- **Buddy session** = a spotter is present. Spotter-dependent lifts (any barbell bench press and the barbell back squat, flagged `needsSpotter` on the exercise) are allowed and recommended, and partner-friendly superset stations (`buddyFriendly`) are ranked higher.
+- **Solo session** = no spotter. Auto-selection never picks a `needsSpotter` lift; it uses the exercise's `soloAlternativeId` instead (Barbell Bench $\rightarrow$ Dumbbell Bench, Back Squat $\rightarrow$ Dumbbell Bulgarian Split Squat). Superset defaults favour self-contained single-station pairs.
 - **Switching a session to Solo** swaps spotter-dependent lifts for their solo alternatives. Switching to Buddy leaves exercises unchanged.
 - **Safety warning (Rule 0 below)**: manually choosing a `needsSpotter` lift on a solo session is allowed but flagged.
 
@@ -73,7 +73,7 @@ As sessions are logged, the engine inspects the most recent completed session an
 The application executes dynamic validation checks in real time as exercises, supersets, and finishers are added to a session:
 
 ### Rule 0: Spotter Required (Safety)
-- **Definition**: Exercises flagged `needsSpotter` (any barbell bench press) should not be pushed hard without a spotter.
+- **Definition**: Exercises flagged `needsSpotter` (any barbell bench press, barbell back squat) should not be pushed hard without a spotter.
 - **Trigger**: The exercise is in a session where `withBuddy` is false.
 - **Result**: Slot health `NEEDS_SPOTTER` (red, person-with-cross icon, takes priority over other flags) plus a critical `SPOTTER_REQUIRED` safeguard alert. Quick Switch offers the exercise's `soloAlternativeId` (e.g., Dumbbell Bench). Ticking Buddy on the session clears it.
 

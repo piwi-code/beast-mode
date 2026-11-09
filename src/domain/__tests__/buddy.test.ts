@@ -55,6 +55,49 @@ describe('buddy (spotter) availability', () => {
     expect(solo.alternativePrimaryLiftIds).not.toContain('bb_flat_bench');
   });
 
+  it('uses Bulgarian Split Squat for solo squat days and keeps the Squat/Deadlift flip-flop', () => {
+    const upperPrev: WorkoutSession = { ...upperAfterLower, splitType: 'UPPER', primaryLiftId: 'db_flat_bench' };
+    const soloLower = suggestNextSession(tueBuddyPlan, [upperPrev], WEDNESDAY);
+    expect(soloLower.splitType).toBe('LOWER');
+    expect(soloLower.recommendedPrimaryLiftId).toBe('db_bulgarian_split_squat');
+    expect(soloLower.alternativePrimaryLiftIds).not.toContain('bb_back_squat');
+
+    const lastSplitSquat: WorkoutSession = {
+      ...upperAfterLower,
+      date: new Date('2026-11-06T09:00:00').toISOString(),
+      primaryLiftId: 'db_bulgarian_split_squat',
+    };
+    const afterSquat = suggestNextSession(tueBuddyPlan, [lastSplitSquat, upperPrev], WEDNESDAY);
+    expect(afterSquat.recommendedPrimaryLiftId).toBe('bb_deadlift');
+
+    const lastDeadlift = { ...lastSplitSquat, primaryLiftId: 'bb_deadlift' };
+    expect(
+      suggestNextSession(tueBuddyPlan, [lastDeadlift, upperPrev], TUESDAY).recommendedPrimaryLiftId
+    ).toBe('bb_back_squat');
+    expect(
+      suggestNextSession(tueBuddyPlan, [lastDeadlift, upperPrev], WEDNESDAY).recommendedPrimaryLiftId
+    ).toBe('db_bulgarian_split_squat');
+  });
+
+  it('flags back squat as needing a spotter on solo sessions', () => {
+    const session: WorkoutSession = {
+      ...upperAfterLower,
+      id: 'solo-lower',
+      withBuddy: false,
+      status: 'PLANNED',
+    };
+    const ev = evaluateExerciseSlot({
+      exerciseId: 'bb_back_squat',
+      slotRole: 'PRIMARY',
+      session,
+      priorSessions: [],
+      exercises: SEED_EXERCISES,
+      plan: tueBuddyPlan,
+    });
+    expect(ev.health).toBe('NEEDS_SPOTTER');
+    expect(ev.suggestedReplacementId).toBe('db_bulgarian_split_squat');
+  });
+
   it('also applies to PPL push days and can be overridden per session', () => {
     const ppl: PlanConfig = { ...tueBuddyPlan, scheduleFamily: 'PPL' };
     expect(suggestNextSession(ppl, [], WEDNESDAY).recommendedPrimaryLiftId).toBe('db_flat_bench');

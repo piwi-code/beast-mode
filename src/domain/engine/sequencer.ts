@@ -66,10 +66,15 @@ export function getPrimaryLiftCandidatesForSplit(
       };
     case 'PPL_LEGS':
     case 'LOWER':
-      return {
-        recommended: 'bb_back_squat',
-        alternatives: ['bb_deadlift', 'bb_rdl'],
-      };
+      return withBuddy
+        ? {
+            recommended: 'bb_back_squat',
+            alternatives: ['bb_deadlift', 'bb_rdl', 'db_bulgarian_split_squat'],
+          }
+        : {
+            recommended: 'db_bulgarian_split_squat',
+            alternatives: ['bb_deadlift', 'bb_rdl'],
+          };
   }
 }
 
@@ -105,9 +110,9 @@ export function getDefaultSupersetsForSplit(
         'ss_lunges_hammer_curls',
       ],
       solo: [
-        'ss_lunges_hammer_curls',
         'ss_hamstring_calf',
         'ss_lat_core_decompression',
+        'ss_lunges_hammer_curls',
         'ss_quad_core_reset',
       ],
     },
@@ -212,15 +217,20 @@ export function suggestNextSession(
 
   if (isLowerSplit(nextSplit)) {
     const lastLower = sorted.find((s) => isLowerSplit(s.splitType));
-    if (lastLower?.primaryLiftId === 'bb_back_squat') {
+    // Squat pattern on a solo day = Bulgarian Split Squat (no spotter needed)
+    const squatId = withBuddy ? 'bb_back_squat' : 'db_bulgarian_split_squat';
+    const lastWasSquat =
+      lastLower?.primaryLiftId === 'bb_back_squat' ||
+      lastLower?.primaryLiftId === 'db_bulgarian_split_squat';
+    if (lastWasSquat) {
       recommendedPrimaryLiftId = 'bb_deadlift';
-      alternativePrimaryLiftIds = ['bb_back_squat', 'bb_rdl'];
+      alternativePrimaryLiftIds = [squatId, 'bb_rdl'];
       rationale += ' Flip-flopping Lower anchor from Squat → Deadlift.';
     } else if (
       lastLower?.primaryLiftId === 'bb_deadlift' ||
       lastLower?.primaryLiftId === 'bb_rdl'
     ) {
-      recommendedPrimaryLiftId = 'bb_back_squat';
+      recommendedPrimaryLiftId = squatId;
       alternativePrimaryLiftIds = ['bb_deadlift', 'bb_rdl'];
       rationale += ' Flip-flopping Lower anchor from Deadlift → Squat.';
     }
@@ -283,6 +293,8 @@ export function buildDraftSessionFromSuggestion(
       ? 95
       : primaryExercise?.id === 'bb_flat_bench'
       ? 85
+      : primaryExercise?.id === 'db_bulgarian_split_squat'
+      ? 20
       : 60;
 
   const primaryLiftSets = Array.from({ length: primarySetCount }, (_, idx) => ({
