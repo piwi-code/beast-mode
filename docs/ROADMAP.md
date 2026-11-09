@@ -36,6 +36,7 @@ When the POC phase ends: enable branch protection on `main` (require PR + passin
 
 ## Phase 2: Polish & Gym-Floor Ergonomics
 - [x] Standard searchable picker (`SelectSheet`) replacing native dropdowns: muscle-group sub-headings, equipment filter chips, plain-language names, one-line descriptions & labels (equipment, main lift, spine load, grip, pairing type)
+- [x] Swipe carousel for the 14-day planner (no scrollbar, edge arrows) & multi-select Muscle/Equipment filters in the Catalog
 - [ ] Built-in auto-starting rest timer (60–90s for supersets/sleds, 2–3m for heavy primary anchors) with Web Audio/Vibration alerts
 - [ ] Shareable Workout Template URLs (encode a planned session into a URL query string so you can text a link to your gym buddy)
 - [ ] Custom Exercise & Custom Superset creator in the UI

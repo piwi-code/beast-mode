@@ -7,3 +7,14 @@
     @apply bg-zinc-950 text-zinc-100;
   }
 }
+
+@layer utilities {
+  /* Hide scrollbars while keeping swipe / wheel scrolling */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}

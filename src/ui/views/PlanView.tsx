@@ -46,6 +46,7 @@ import {
   getPrimaryLiftSuggestionIds,
 } from '../../domain/catalog/pickerOptions';
 import { ExercisePicker, SupersetPicker } from '../components/ExercisePicker';
+import { ScrollCarousel } from '../components/ScrollCarousel';
 
 interface PlanViewProps {
   plan: PlanConfig;
@@ -274,8 +275,11 @@ export const PlanView: React.FC<PlanViewProps> = ({
           </button>
         </div>
 
-        {/* Horizontal swipe strip on mobile, 7-col grid on desktop */}
-        <div className="flex sm:grid sm:grid-cols-7 gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+        {/* Swipe carousel on mobile (arrows at edges), 7-col grid on desktop */}
+        <ScrollCarousel
+          ariaLabel="Next 14 days"
+          className="flex sm:grid sm:grid-cols-7 gap-2 scroll-px-1 px-1 -mx-1"
+        >
           {next14Days.map((day, idx) => {
             const key = toDateKey(day);
             const dayPlanned = sortedPlanned.filter(
@@ -289,7 +293,7 @@ export const PlanView: React.FC<PlanViewProps> = ({
             return (
               <div
                 key={key}
-                className={`min-w-[88px] sm:min-w-0 rounded-xl border p-2.5 flex flex-col justify-between min-h-[84px] transition ${
+                className={`snap-start shrink-0 w-[88px] sm:w-auto sm:min-w-0 rounded-xl border p-2.5 flex flex-col justify-between min-h-[84px] transition ${
                   dayPlanned.length > 0
                     ? 'border-emerald-500/50 bg-emerald-950/25'
                     : isToday
@@ -347,7 +351,7 @@ export const PlanView: React.FC<PlanViewProps> = ({
               </div>
             );
           })}
-        </div>
+        </ScrollCarousel>
       </div>
 
       {/* 2. PLANNED SESSION CARDS (Collapsed by default, tap to expand) */}

@@ -8,34 +8,32 @@ import {
   Search,
 } from 'lucide-react';
 import {
-  EquipmentCategory,
   Exercise,
   SupersetPair,
 } from '../../domain/models/types';
 import { MUSCLE_LABELS } from '../../domain/engine/rulesEngine';
 import { SPLIT_SHORT_LABELS } from '../../domain/engine/sequencer';
+import {
+  BODY_REGION_GROUPS,
+  EQUIPMENT_FILTERS,
+  PAIRING_LABELS,
+  getExerciseRegion,
+} from '../../domain/catalog/pickerOptions';
+import { MultiSelectFilter } from '../components/MultiSelectFilter';
 
 interface CatalogViewProps {
   exercises: Exercise[];
   curatedSupersets: SupersetPair[];
 }
 
-const EQUIPMENT_FILTERS: Array<EquipmentCategory | 'ALL'> = [
-  'ALL',
-  'BARBELL',
-  'DUMBBELL',
-  'CABLE',
-  'MACHINE',
-  'TURF',
-  'BODYWEIGHT',
-];
 
 export const CatalogView: React.FC<CatalogViewProps> = ({
   exercises,
   curatedSupersets,
 }) => {
   const [search, setSearch] = useState('');
-  const [eqFilter, setEqFilter] = useState<EquipmentCategory | 'ALL'>('ALL');
+  const [eqFilters, setEqFilters] = useState<string[]>([]);
+  const [regionFilters, setRegionFilters] = useState<string[]>([]);
   const [section, setSection] = useState<'ALL' | 'SUPERSETS' | 'EXERCISES'>(
     'ALL'
   );
@@ -47,10 +45,16 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   const filteredSupersets = curatedSupersets.filter((ss) => {
     const exA = exerciseMap.get(ss.exerciseAId);
     const exB = exerciseMap.get(ss.exerciseBId);
+    const pair = [exA, exB].filter((e): e is Exercise => Boolean(e));
     if (
-      eqFilter !== 'ALL' &&
-      exA?.equipment !== eqFilter &&
-      exB?.equipment !== eqFilter
+      eqFilters.length &&
+      !pair.some((e) => eqFilters.includes(e.equipment))
+    ) {
+      return false;
+    }
+    if (
+      regionFilters.length &&
+      !pair.some((e) => regionFilters.includes(getExerciseRegion(e)))
     ) {
       return false;
     }
@@ -64,7 +68,9 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   });
 
   const filteredExercises = exercises.filter((ex) => {
-    if (eqFilter !== 'ALL' && ex.equipment !== eqFilter) return false;
+    if (eqFilters.length && !eqFilters.includes(ex.equipment)) return false;
+    if (regionFilters.length && !regionFilters.includes(getExerciseRegion(ex)))
+      return false;
     if (!query) return true;
     return (
       ex.name.toLowerCase().includes(query) ||
@@ -74,6 +80,16 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
       ex.executionDirections?.toLowerCase().includes(query)
     );
   });
+
+  const equipmentOptions = EQUIPMENT_FILTERS.map((f) => ({
+    ...f,
+    count: exercises.filter((e) => e.equipment === f.id).length,
+  }));
+  const regionOptions = BODY_REGION_GROUPS.map((g) => ({
+    ...g,
+    count: exercises.filter((e) => getExerciseRegion(e) === g.id).length,
+  }));
+  const hasFilters = eqFilters.length > 0 || regionFilters.length > 0;
 
   const toggleExpand = (id: string) => {
     setExpandedItemId((prev) => (prev === id ? null : id));
@@ -130,22 +146,35 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             />
           </div>
 
-          <div className="flex gap-1.5 overflow-x-auto pb-1">
-            {EQUIPMENT_FILTERS.map((eq) => (
-              <button
-                key={eq}
-                type="button"
-                onClick={() => setEqFilter(eq)}
-                className={`rounded-xl px-3 py-1.5 text-xs font-bold shrink-0 transition ${
-                  eqFilter === eq
-                    ? 'bg-emerald-500 text-zinc-950'
-                    : 'bg-zinc-800 text-zinc-300'
-                }`}
-              >
-                {eq}
-              </button>
-            ))}
+          <div className="grid grid-cols-2 gap-2">
+            <MultiSelectFilter
+              label="Muscle"
+              sheetTitle="Filter by muscle group"
+              options={regionOptions}
+              selected={regionFilters}
+              onChange={setRegionFilters}
+            />
+            <MultiSelectFilter
+              label="Equipment"
+              options={equipmentOptions}
+              selected={eqFilters}
+              onChange={setEqFilters}
+            />
           </div>
+          {hasFilters && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setEqFilters([]);
+                  setRegionFilters([]);
+                }}
+                className="h-8 px-1 text-xs font-bold text-emerald-400 hover:text-emerald-300"
+              >
+                Clear filters
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -157,7 +186,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             Curated Superset Pairings ({filteredSupersets.length})
           </div>
 
-          <div className="grid gap-2.5 md:grid-cols-2">
+          <div className="grid gap-2.5 md:grid-cols-2 [&>*]:min-w-0">
             {filteredSupersets.map((ss) => {
               const exA = exerciseMap.get(ss.exerciseAId);
               const exB = exerciseMap.get(ss.exerciseBId);
@@ -180,7 +209,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5 mb-1">
                         <span className="rounded bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
-                          {ss.pairingType}
+                          {PAIRING_LABELS[ss.pairingType]}
                         </span>
                         {ss.buddyFriendly && (
                           <span className="rounded bg-zinc-800 px-2 py-0.5 text-[10px] text-emerald-400 font-semibold">
@@ -269,7 +298,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             Individual Exercises ({filteredExercises.length})
           </div>
 
-          <div className="grid gap-2.5 md:grid-cols-2">
+          <div className="grid gap-2.5 md:grid-cols-2 [&>*]:min-w-0">
             {filteredExercises.map((ex) => {
               const isExpanded = expandedItemId === ex.id;
               return (

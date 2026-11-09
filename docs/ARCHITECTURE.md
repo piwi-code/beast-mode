@@ -35,7 +35,10 @@ beast-mode/
 │       ├── components/      # Reusable UI building blocks
 │       │   ├── SelectSheet.tsx          # STANDARD data picker: searchable bottom sheet w/ sub-headings, filter chips, labels.
 │       │   │                            # Use this (not native <select>) anywhere the user picks an item from data.
-│       │   └── ExercisePicker.tsx       # ExercisePicker & SupersetPicker built on SelectSheet
+│       │   ├── ExercisePicker.tsx       # ExercisePicker & SupersetPicker built on SelectSheet
+│       │   ├── MultiSelectFilter.tsx    # STANDARD multi-select filter (pill trigger + checkbox sheet); use instead of chip rows
+│       │   ├── BottomSheet.tsx          # Shared sheet chrome used by SelectSheet & MultiSelectFilter
+│       │   └── ScrollCarousel.tsx       # STANDARD horizontal strip: swipe + snap, hidden scrollbar, edge arrows
 │       ├── views/           # 5 Core Pages:
 │       │   ├── PlanView.tsx             # 14-day calendar, lightweight session planning, 4-color health & Quick Switch, Current vs Future loading
 │       │   ├── CurrentSessionView.tsx   # Active gym floor session tracker (weights, reps, 2/3 set toggles, pivot split, complete/abandon)

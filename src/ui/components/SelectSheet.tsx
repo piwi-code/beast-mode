@@ -6,8 +6,8 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { createPortal } from 'react-dom';
 import { Check, ChevronsUpDown, Search, X } from 'lucide-react';
+import { BottomSheet } from './BottomSheet';
 import {
   PickerFilter,
   PickerGroup,
@@ -74,17 +74,6 @@ interface Section {
   options: PickerOption[];
 }
 
-function useBodyScrollLock(active: boolean) {
-  useEffect(() => {
-    if (!active) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [active]);
-}
-
 function isCoarsePointer(): boolean {
   return (
     typeof window !== 'undefined' &&
@@ -123,7 +112,6 @@ export const SelectSheet: React.FC<SelectSheetProps> = ({
 
   const selected = options.find((o) => o.id === value);
 
-  useBodyScrollLock(open);
 
   // ----- Build visible sections -------------------------------------------
   const sections: Section[] = useMemo(() => {
@@ -301,192 +289,160 @@ export const SelectSheet: React.FC<SelectSheetProps> = ({
   let runningIndex = -1;
   const activeKey = flat[activeIndex]?.key;
 
-  const sheet = open
-    ? createPortal(
-        <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-        >
-          <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-[2px]"
-            onClick={close}
-            aria-hidden="true"
+  const sheet = (
+    <BottomSheet
+      ref={dialogRef}
+      open={open}
+      title={sheetTitle}
+      onClose={close}
+      closeOnEscape={false}
+    >
+      {/* Search */}
+      <div className="shrink-0 px-4 pb-2">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+          <input
+            ref={searchRef}
+            type="text"
+            inputMode="search"
+            enterKeyHint="search"
+            autoComplete="off"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={searchPlaceholder}
+            role="combobox"
+            aria-expanded="true"
+            aria-controls={listboxId}
+            aria-activedescendant={
+              activeKey ? `${listboxId}-${activeKey}` : undefined
+            }
+            className="h-12 w-full rounded-xl border border-zinc-700 bg-zinc-950 pl-10 pr-10 text-base sm:text-sm text-white placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none"
           />
-
-          <div
-            ref={dialogRef}
-            tabIndex={-1}
-            role="dialog"
-            aria-modal="true"
-            aria-label={sheetTitle}
-            className="relative flex w-full outline-none sm:max-w-lg flex-col overflow-hidden rounded-t-3xl sm:rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl max-h-[88dvh] sm:max-h-[80vh]"
-          >
-            {/* Grab handle (phones) */}
-            <div className="sm:hidden flex shrink-0 justify-center pt-2">
-              <div className="h-1 w-10 rounded-full bg-zinc-700" />
-            </div>
-
-            {/* Header */}
-            <div className="flex shrink-0 items-center justify-between gap-2 px-4 pt-2 sm:pt-4">
-              <h2 className="text-base font-extrabold text-white">{sheetTitle}</h2>
-              <button
-                type="button"
-                onClick={close}
-                aria-label="Close"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 -mr-2"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Search */}
-            <div className="shrink-0 px-4 pb-2">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-                <input
-                  ref={searchRef}
-                  type="text"
-                  inputMode="search"
-                  enterKeyHint="search"
-                  autoComplete="off"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder={searchPlaceholder}
-                  role="combobox"
-                  aria-expanded="true"
-                  aria-controls={listboxId}
-                  aria-activedescendant={
-                    activeKey ? `${listboxId}-${activeKey}` : undefined
-                  }
-                  className="h-12 w-full rounded-xl border border-zinc-700 bg-zinc-950 pl-10 pr-10 text-base sm:text-sm text-white placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none"
-                />
-                {query && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setQuery('');
-                      searchRef.current?.focus();
-                    }}
-                    aria-label="Clear search"
-                    className="absolute right-1 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center text-zinc-500 hover:text-white"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Filter chips */}
-            {filters && filters.length > 0 && (
-              <div className="flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-3 [scrollbar-width:none]">
-                {[{ id: null as string | null, label: 'All' }, ...filters].map((f) => {
-                  const active = filterId === f.id;
-                  return (
-                    <button
-                      key={f.id ?? '__all'}
-                      type="button"
-                      onClick={() => setFilterId(f.id)}
-                      aria-pressed={active}
-                      className={`h-9 shrink-0 rounded-full border px-3.5 text-xs font-bold transition ${
-                        active
-                          ? 'border-emerald-500 bg-emerald-500 text-zinc-950'
-                          : 'border-zinc-700 bg-zinc-950 text-zinc-300 hover:text-white'
-                      }`}
-                    >
-                      {f.label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* List */}
-            <div
-              ref={listRef}
-              id={listboxId}
-              role="listbox"
-              aria-label={sheetTitle}
-              className="min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-zinc-800 pb-[max(1rem,env(safe-area-inset-bottom))]"
+          {query && (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery('');
+                searchRef.current?.focus();
+              }}
+              aria-label="Clear search"
+              className="absolute right-1 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center text-zinc-500 hover:text-white"
             >
-              {sections.length === 0 && (
-                <div className="px-4 py-10 text-center text-sm text-zinc-400">
-                  No matches.{' '}
-                  <button
-                    type="button"
-                    className="font-bold text-emerald-400"
-                    onClick={() => {
-                      setQuery('');
-                      setFilterId(null);
-                    }}
-                  >
-                    Clear search
-                  </button>
-                </div>
-              )}
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
 
-              {sections.map((section) => (
-                <div key={section.key} role="group" aria-label={section.label}>
-                  <div className="sticky top-0 z-10 flex items-center justify-between bg-zinc-900/95 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400 backdrop-blur">
-                    <span>{section.label}</span>
-                    <span className="text-zinc-500">{section.options.length}</span>
-                  </div>
+      {/* Filter chips */}
+      {filters && filters.length > 0 && (
+        <div className="flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-3 [scrollbar-width:none]">
+          {[{ id: null as string | null, label: 'All' }, ...filters].map((f) => {
+            const active = filterId === f.id;
+            return (
+              <button
+                key={f.id ?? '__all'}
+                type="button"
+                onClick={() => setFilterId(f.id)}
+                aria-pressed={active}
+                className={`h-9 shrink-0 rounded-full border px-3.5 text-xs font-bold transition ${
+                  active
+                    ? 'border-emerald-500 bg-emerald-500 text-zinc-950'
+                    : 'border-zinc-700 bg-zinc-950 text-zinc-300 hover:text-white'
+                }`}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
-                  {section.options.map((o) => {
-                    runningIndex += 1;
-                    const idx = runningIndex;
-                    const key = `${section.key}:${o.id}`;
-                    const isSelected = o.id === value;
-                    const isActive = idx === activeIndex;
-                    return (
-                      <div
-                        key={key}
-                        id={`${listboxId}-${key}`}
-                        data-key={key}
-                        role="option"
-                        aria-selected={isSelected}
-                        onClick={() => choose(o.id)}
-                        onMouseMove={() => {
-                          if (activeIndex !== idx) setActiveIndex(idx);
-                        }}
-                        className={`mx-2 my-0.5 flex min-h-[56px] cursor-pointer items-start gap-3 rounded-xl px-3 py-2.5 transition active:bg-zinc-800 ${
-                          isSelected
-                            ? 'bg-emerald-500/10 ring-1 ring-emerald-500/40'
-                            : isActive
-                              ? 'bg-zinc-800/70'
-                              : ''
-                        }`}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-bold text-white">{o.title}</div>
-                          {o.subtitle && (
-                            <div className="mt-0.5 text-xs leading-snug text-zinc-400">
-                              {o.subtitle}
-                            </div>
-                          )}
-                          {(o.tags.length > 0 || o.meta) && (
-                            <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                              {o.tags.map((t) => (
-                                <PickerTagChip key={t.label} tag={t} />
-                              ))}
-                              {o.meta && (
-                                <span className="text-[10px] text-zinc-500">{o.meta}</span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex h-6 w-6 shrink-0 items-center justify-center pt-0.5">
-                          {isSelected && <Check className="h-5 w-5 text-emerald-400" />}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
+      {/* List */}
+      <div
+        ref={listRef}
+        id={listboxId}
+        role="listbox"
+        aria-label={sheetTitle}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-zinc-800 pb-[max(1rem,env(safe-area-inset-bottom))]"
+      >
+        {sections.length === 0 && (
+          <div className="px-4 py-10 text-center text-sm text-zinc-400">
+            No matches.{' '}
+            <button
+              type="button"
+              className="font-bold text-emerald-400"
+              onClick={() => {
+                setQuery('');
+                setFilterId(null);
+              }}
+            >
+              Clear search
+            </button>
           </div>
-        </div>,
-        document.body
-      )
-    : null;
+        )}
+
+        {sections.map((section) => (
+          <div key={section.key} role="group" aria-label={section.label}>
+            <div className="sticky top-0 z-10 flex items-center justify-between bg-zinc-900/95 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400 backdrop-blur">
+              <span>{section.label}</span>
+              <span className="text-zinc-500">{section.options.length}</span>
+            </div>
+
+            {section.options.map((o) => {
+              runningIndex += 1;
+              const idx = runningIndex;
+              const key = `${section.key}:${o.id}`;
+              const isSelected = o.id === value;
+              const isActive = idx === activeIndex;
+              return (
+                <div
+                  key={key}
+                  id={`${listboxId}-${key}`}
+                  data-key={key}
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() => choose(o.id)}
+                  onMouseMove={() => {
+                    if (activeIndex !== idx) setActiveIndex(idx);
+                  }}
+                  className={`mx-2 my-0.5 flex min-h-[56px] cursor-pointer items-start gap-3 rounded-xl px-3 py-2.5 transition active:bg-zinc-800 ${
+                    isSelected
+                      ? 'bg-emerald-500/10 ring-1 ring-emerald-500/40'
+                      : isActive
+                        ? 'bg-zinc-800/70'
+                        : ''
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-bold text-white">{o.title}</div>
+                    {o.subtitle && (
+                      <div className="mt-0.5 text-xs leading-snug text-zinc-400">
+                        {o.subtitle}
+                      </div>
+                    )}
+                    {(o.tags.length > 0 || o.meta) && (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                        {o.tags.map((t) => (
+                          <PickerTagChip key={t.label} tag={t} />
+                        ))}
+                        {o.meta && (
+                          <span className="text-[10px] text-zinc-500">{o.meta}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center pt-0.5">
+                    {isSelected && <Check className="h-5 w-5 text-emerald-400" />}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </BottomSheet>
+  );
 
   return (
     <>
