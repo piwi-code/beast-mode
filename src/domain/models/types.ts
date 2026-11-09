@@ -36,6 +36,10 @@ export type EquipmentCategory =
 export interface Exercise {
   id: string;
   name: string;
+  /** Plain-language name for compact UI (pickers, superset titles). */
+  shortName?: string;
+  /** One-sentence, jargon-free description of the movement. */
+  summary?: string;
   pattern: MovementPattern;
   primaryMuscles: MuscleGroup[];
   secondaryMuscles: MuscleGroup[];
@@ -62,6 +66,8 @@ export type PairingType =
 export interface SupersetPair {
   id: string;
   name: string;
+  /** One-sentence, jargon-free description of why the pairing works. */
+  summary?: string;
   exerciseAId: string;
   exerciseBId: string;
   pairingType: PairingType;

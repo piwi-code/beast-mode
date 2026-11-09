@@ -5,6 +5,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'bb_back_squat',
     name: 'Barbell Back Squat',
+    shortName: 'Back Squat',
+    summary: 'Bar on your upper back, squat to parallel and stand back up.',
     pattern: 'KNEE_DOMINANT',
     primaryMuscles: ['QUADS', 'GLUTES'],
     secondaryMuscles: ['CORE'],
@@ -28,6 +30,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'bb_flat_bench',
     name: 'Flat Barbell Bench Press',
+    shortName: 'Bench Press',
+    summary: 'Lie on a flat bench and press a barbell up from your chest.',
     pattern: 'HORIZONTAL_PUSH',
     primaryMuscles: ['CHEST'],
     secondaryMuscles: ['ANTERIOR_DELT', 'TRICEPS'],
@@ -51,6 +55,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'bb_deadlift',
     name: 'Conventional / Trap-Bar Deadlift',
+    shortName: 'Deadlift',
+    summary: 'Lift a loaded bar from the floor to standing by driving through your hips.',
     pattern: 'HIP_HINGE',
     primaryMuscles: ['HAMSTRINGS', 'GLUTES'],
     secondaryMuscles: ['UPPER_BACK', 'LATS', 'CORE'],
@@ -74,6 +80,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'bb_rdl',
     name: 'Barbell Romanian Deadlift (RDL)',
+    shortName: 'Romanian Deadlift',
+    summary: 'Hinge at the hips with soft knees, lowering the bar to stretch the hamstrings.',
     pattern: 'HIP_HINGE',
     primaryMuscles: ['HAMSTRINGS', 'GLUTES'],
     secondaryMuscles: ['UPPER_BACK', 'CORE'],
@@ -97,6 +105,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'bb_ohp',
     name: 'Standing Barbell Overhead Press',
+    shortName: 'Overhead Press',
+    summary: 'Standing, press a barbell from your shoulders to straight overhead.',
     pattern: 'VERTICAL_PUSH',
     primaryMuscles: ['ANTERIOR_DELT', 'TRICEPS'],
     secondaryMuscles: ['CHEST_UPPER', 'CORE'],
@@ -119,6 +129,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'db_flat_bench',
     name: 'Flat Dumbbell Bench Press',
+    shortName: 'Dumbbell Bench Press',
+    summary: 'Flat-bench press with a dumbbell in each hand — no spotter needed.',
     pattern: 'HORIZONTAL_PUSH',
     primaryMuscles: ['CHEST'],
     secondaryMuscles: ['ANTERIOR_DELT', 'TRICEPS'],
@@ -141,6 +153,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'db_incline_press',
     name: 'Incline Dumbbell Bench Press',
+    shortName: 'Incline Dumbbell Press',
+    summary: 'Press dumbbells on an inclined bench to bias the upper chest.',
     pattern: 'HORIZONTAL_PUSH',
     primaryMuscles: ['CHEST_UPPER', 'CHEST'],
     secondaryMuscles: ['ANTERIOR_DELT', 'TRICEPS'],
@@ -163,6 +177,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'weighted_pullup',
     name: 'Weighted / Bodyweight Pull-Up',
+    shortName: 'Pull-Up',
+    summary: 'Hang from a bar and pull your chin over it; add weight when ready.',
     pattern: 'VERTICAL_PULL',
     primaryMuscles: ['LATS', 'UPPER_BACK'],
     secondaryMuscles: ['BICEPS', 'CORE'],
@@ -185,6 +201,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'bb_pendlay_row',
     name: 'Barbell Pendlay / Bent-Over Row',
+    shortName: 'Barbell Row',
+    summary: 'Bent over at the hips, row a barbell into your lower chest.',
     pattern: 'HORIZONTAL_PULL',
     primaryMuscles: ['UPPER_BACK', 'LATS'],
     secondaryMuscles: ['BICEPS', 'CORE'],
@@ -208,6 +226,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'seated_hamstring_curl',
     name: 'Seated Machine Hamstring Curl',
+    shortName: 'Hamstring Curl',
+    summary: 'Seated machine: curl the pad down by bending your knees.',
     pattern: 'ISOLATION',
     primaryMuscles: ['HAMSTRINGS'],
     secondaryMuscles: [],
@@ -228,6 +248,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'machine_calf_raise_standing',
     name: 'Standing Deficit Machine Calf Raise',
+    shortName: 'Calf Raise',
+    summary: 'Standing machine: rise up onto your toes from a deep heel stretch.',
     pattern: 'ISOLATION',
     primaryMuscles: ['CALVES'],
     secondaryMuscles: [],
@@ -247,6 +269,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'lat_pulldown_neutral',
     name: 'Neutral-Grip Lat Pulldown',
+    shortName: 'Lat Pulldown',
+    summary: 'Cable machine: pull a neutral-grip handle down to your upper chest.',
     pattern: 'VERTICAL_PULL',
     primaryMuscles: ['LATS'],
     secondaryMuscles: ['BICEPS', 'UPPER_BACK'],
@@ -267,6 +291,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'captains_chair_knee_raise',
     name: "Captain's Chair Knee Raise",
+    shortName: 'Knee Raise',
+    summary: 'Supported on forearms in a dip-style chair, lift your knees toward your chest.',
     pattern: 'CORE_DECOMPRESSION',
     primaryMuscles: ['CORE'],
     secondaryMuscles: [],
@@ -287,6 +313,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'bench_reverse_crunch',
     name: 'Bench Reverse Crunch (Pelvic Curl)',
+    shortName: 'Reverse Crunch',
+    summary: 'Lying on a bench, curl your hips up off the pad using your lower abs.',
     pattern: 'CORE_DECOMPRESSION',
     primaryMuscles: ['CORE'],
     secondaryMuscles: [],
@@ -306,6 +334,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'db_walking_lunges',
     name: 'Dumbbell Walking Lunges',
+    shortName: 'Walking Lunges',
+    summary: 'Hold dumbbells and take long alternating lunge steps forward.',
     pattern: 'KNEE_DOMINANT',
     primaryMuscles: ['QUADS', 'GLUTES'],
     secondaryMuscles: ['CALVES', 'CORE'],
@@ -326,6 +356,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'leg_extension_machine',
     name: 'Seated Leg Extension Machine',
+    shortName: 'Leg Extension',
+    summary: 'Seated machine: straighten your knees against the pad to work the quads.',
     pattern: 'ISOLATION',
     primaryMuscles: ['QUADS'],
     secondaryMuscles: [],
@@ -347,6 +379,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'machine_row_narrow',
     name: 'Chest-Supported Machine Row (Narrow Grip)',
+    shortName: 'Machine Row',
+    summary: 'Chest supported on a pad, row narrow handles toward your stomach.',
     pattern: 'HORIZONTAL_PULL',
     primaryMuscles: ['LATS', 'UPPER_BACK'],
     secondaryMuscles: ['BICEPS'],
@@ -367,6 +401,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'incline_db_row',
     name: 'Incline Chest-Supported Dumbbell Row',
+    shortName: 'Incline Dumbbell Row',
+    summary: 'Lie face-down on an incline bench and row dumbbells up to your sides.',
     pattern: 'HORIZONTAL_PULL',
     primaryMuscles: ['UPPER_BACK', 'LATS'],
     secondaryMuscles: ['BICEPS', 'REAR_DELT'],
@@ -386,6 +422,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'cable_fly_low_high',
     name: 'Low-to-High Cable Fly',
+    shortName: 'Cable Fly (Low to High)',
+    summary: 'Sweep cable handles from hip height up and together at chest level.',
     pattern: 'ISOLATION',
     primaryMuscles: ['CHEST_UPPER'],
     secondaryMuscles: ['ANTERIOR_DELT'],
@@ -406,6 +444,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'db_hammer_curls',
     name: 'Standing Dumbbell Hammer Curls',
+    shortName: 'Hammer Curl',
+    summary: 'Curl dumbbells with palms facing each other (thumbs up).',
     pattern: 'ISOLATION',
     primaryMuscles: ['BICEPS'],
     secondaryMuscles: [],
@@ -425,6 +465,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'ez_skull_crusher',
     name: 'Dumbbell / EZ-Bar Skull Crushers',
+    shortName: 'Skull Crusher',
+    summary: 'Lying on a bench, bend at the elbows to lower the weight toward your forehead, then extend.',
     pattern: 'ISOLATION',
     primaryMuscles: ['TRICEPS'],
     secondaryMuscles: [],
@@ -444,6 +486,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'seated_isolated_curl',
     name: 'Seated Incline / Isolated Dumbbell Curls',
+    shortName: 'Incline Dumbbell Curl',
+    summary: 'Seated on an incline bench, curl dumbbells with arms hanging behind you.',
     pattern: 'ISOLATION',
     primaryMuscles: ['BICEPS'],
     secondaryMuscles: [],
@@ -463,6 +507,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'cable_lateral_raise',
     name: 'Single-Arm Cable Lateral Raise',
+    shortName: 'Cable Lateral Raise',
+    summary: 'One arm at a time, raise a cable handle out to the side to shoulder height.',
     pattern: 'ISOLATION',
     primaryMuscles: ['LATERAL_DELT'],
     secondaryMuscles: [],
@@ -482,6 +528,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'tricep_rope_pushdown',
     name: 'Cable Rope Tricep Pushdown',
+    shortName: 'Tricep Pushdown',
+    summary: 'Push a cable rope down until your arms are straight, splitting the rope at the bottom.',
     pattern: 'ISOLATION',
     primaryMuscles: ['TRICEPS'],
     secondaryMuscles: [],
@@ -503,6 +551,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'turf_sled_push_pull',
     name: 'Turf Sled (Forward Push + Backward Drag)',
+    shortName: 'Sled Push & Drag',
+    summary: 'Push a loaded sled down the turf, then drag it back walking backwards.',
     pattern: 'LOCOMOTION',
     primaryMuscles: ['QUADS', 'CALVES', 'GLUTES'],
     secondaryMuscles: ['CORE'],
@@ -524,6 +574,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'rope_face_pull',
     name: 'Long-Rope Cable Face Pull',
+    shortName: 'Face Pull',
+    summary: 'Pull a cable rope toward your face, elbows high, to work rear delts.',
     pattern: 'ISOLATION',
     primaryMuscles: ['REAR_DELT', 'UPPER_BACK'],
     secondaryMuscles: [],
@@ -544,6 +596,8 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'farmers_carry_turf',
     name: "Heavy Dumbbell Farmer's Carry",
+    shortName: "Farmer's Carry",
+    summary: 'Walk tall holding a heavy dumbbell in each hand.',
     pattern: 'LOCOMOTION',
     primaryMuscles: ['CORE', 'UPPER_BACK'],
     secondaryMuscles: ['GLUTES', 'CALVES'],
@@ -567,6 +621,7 @@ export const SEED_SUPERSETS: SupersetPair[] = [
   {
     id: 'ss_hamstring_calf',
     name: 'Knee-Safe Posterior Armor',
+    summary: 'Back-of-leg strength that is easy on the knees.',
     exerciseAId: 'seated_hamstring_curl',
     exerciseBId: 'machine_calf_raise_standing',
     pairingType: 'COMPOUND_ISOLATION',
@@ -580,6 +635,7 @@ export const SEED_SUPERSETS: SupersetPair[] = [
   {
     id: 'ss_lat_core_decompression',
     name: 'Lat Width & Pelvic Traction',
+    summary: 'Back width work paired with a hanging core move that unloads the spine.',
     exerciseAId: 'lat_pulldown_neutral',
     exerciseBId: 'captains_chair_knee_raise',
     pairingType: 'DECOMPRESSION',
@@ -593,6 +649,7 @@ export const SEED_SUPERSETS: SupersetPair[] = [
   {
     id: 'ss_row_cable_fly',
     name: 'Antagonist Upper Back & Upper Chest',
+    summary: 'Opposing pull and push — one side rests while the other works.',
     exerciseAId: 'machine_row_narrow',
     exerciseBId: 'cable_fly_low_high',
     pairingType: 'ANTAGONIST',
@@ -606,6 +663,7 @@ export const SEED_SUPERSETS: SupersetPair[] = [
   {
     id: 'ss_lunges_hammer_curls',
     name: 'Space-Smart Lunge & Arm Station',
+    summary: 'Lunges and curls from one spot with a single pair of dumbbells.',
     exerciseAId: 'db_walking_lunges',
     exerciseBId: 'db_hammer_curls',
     pairingType: 'UPPER_LOWER',
@@ -619,6 +677,7 @@ export const SEED_SUPERSETS: SupersetPair[] = [
   {
     id: 'ss_shared_bench_arms',
     name: 'Shared Bench Antagonist Arm Pump',
+    summary: 'Triceps and biceps back-to-back from the same bench.',
     exerciseAId: 'ez_skull_crusher',
     exerciseBId: 'seated_isolated_curl',
     pairingType: 'ANTAGONIST',
@@ -632,6 +691,7 @@ export const SEED_SUPERSETS: SupersetPair[] = [
   {
     id: 'ss_incline_row_lateral_delt',
     name: '36h Turnaround Shoulder-Safe Pull & Delt',
+    summary: 'Shoulder-friendly back work plus side delts; recovers quickly.',
     exerciseAId: 'incline_db_row',
     exerciseBId: 'cable_lateral_raise',
     pairingType: 'COMPOUND_ISOLATION',
@@ -645,6 +705,7 @@ export const SEED_SUPERSETS: SupersetPair[] = [
   {
     id: 'ss_cable_delt_tricep',
     name: 'Single-Tower Cable Delt & Tricep Lockout',
+    summary: 'Delts and triceps from a single cable station.',
     exerciseAId: 'cable_lateral_raise',
     exerciseBId: 'tricep_rope_pushdown',
     pairingType: 'COMPOUND_ISOLATION',
@@ -658,6 +719,7 @@ export const SEED_SUPERSETS: SupersetPair[] = [
   {
     id: 'ss_quad_core_reset',
     name: 'Quad Isolation & Bench Pelvic Reset',
+    summary: 'Quad isolation followed by a lower-ab move that resets the pelvis.',
     exerciseAId: 'leg_extension_machine',
     exerciseBId: 'bench_reverse_crunch',
     pairingType: 'DECOMPRESSION',

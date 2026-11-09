@@ -24,13 +24,18 @@ beast-mode/
 │   │   │   ├── rulesEngine.ts       # Axial load, antagonist pairing, intra-session overlap, 48h lookback
 │   │   │   ├── volumeTracker.ts     # 7-day & 14-day muscle volume balance & superset recommender
 │   │   │   └── oneRepMax.ts         # Epley/Brzycki 1RM & main lift progression calculators
+│   │   ├── catalog/
+│   │   │   └── pickerOptions.ts     # Picker labels, body-region grouping, equipment filters & search ranking
 │   │   └── seed/            # Default exercises, curated supersets, finisher protocols, split templates
 │   ├── data/                # DATA ACCESS LAYER — Repository interfaces & adapters
 │   │   ├── interfaces/      # Async repository contracts (IWorkoutRepository, IPlanRepository, etc.)
 │   │   ├── local/           # Dexie.js (IndexedDB) implementation + JSON export/import backup
 │   │   └── context/         # Dependency Injection provider so UI only talks to IRepository interfaces
 │   └── ui/                  # PRESENTATION LAYER — React + TypeScript + Tailwind CSS
-│       ├── components/      # Reusable UI building blocks (SafeguardBanners, SupersetCard, VolumeChart)
+│       ├── components/      # Reusable UI building blocks
+│       │   ├── SelectSheet.tsx          # STANDARD data picker: searchable bottom sheet w/ sub-headings, filter chips, labels.
+│       │   │                            # Use this (not native <select>) anywhere the user picks an item from data.
+│       │   └── ExercisePicker.tsx       # ExercisePicker & SupersetPicker built on SelectSheet
 │       ├── views/           # 5 Core Pages:
 │       │   ├── PlanView.tsx             # 14-day calendar, lightweight session planning, 4-color health & Quick Switch, Current vs Future loading
 │       │   ├── CurrentSessionView.tsx   # Active gym floor session tracker (weights, reps, 2/3 set toggles, pivot split, complete/abandon)
