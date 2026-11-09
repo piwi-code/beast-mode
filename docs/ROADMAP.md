@@ -1,5 +1,14 @@
 # Project Roadmap & Task Tracker
 
+## Development Workflow
+
+| Phase | Branching & review |
+| --- | --- |
+| **Pre-alpha / POC (current)** | Commit directly to `main` — one squashed commit per feature, pushed straight to `main`. Every push to `main` runs the tests and deploys to GitHub Pages. No PRs required. |
+| **After POC sign-off** | `main` becomes a protected branch. All changes go through feature branches and pull requests, with passing CI (tests + build) required before merge. |
+
+When the POC phase ends: enable branch protection on `main` (require PR + passing `Deploy to GitHub Pages` build/test job) and update this table.
+
 ## Phase 1: Foundation & Clean Architecture (Current MVP)
 - [x] Define domain specification and rules engine (`docs/WORKOUT_LOGIC.md`)
 - [x] Define layered architecture and migration strategy (`docs/ARCHITECTURE.md`)
@@ -26,6 +35,7 @@
 ---
 
 ## Phase 2: Polish & Gym-Floor Ergonomics
+- [x] Standard searchable picker (`SelectSheet`) replacing native dropdowns: muscle-group sub-headings, equipment filter chips, plain-language names, one-line descriptions & labels (equipment, main lift, spine load, grip, pairing type)
 - [ ] Built-in auto-starting rest timer (60–90s for supersets/sleds, 2–3m for heavy primary anchors) with Web Audio/Vibration alerts
 - [ ] Shareable Workout Template URLs (encode a planned session into a URL query string so you can text a link to your gym buddy)
 - [ ] Custom Exercise & Custom Superset creator in the UI

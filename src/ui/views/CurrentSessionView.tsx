@@ -45,6 +45,11 @@ import {
   evaluateExerciseSlot,
   rankSupersetsForSession,
 } from '../../domain/engine/rulesEngine';
+import {
+  getFinisherSuggestionIds,
+  getPrimaryLiftSuggestionIds as primaryLiftSuggestions,
+} from '../../domain/catalog/pickerOptions';
+import { ExercisePicker } from '../components/ExercisePicker';
 import { estimateOneRepMax } from '../../domain/engine/oneRepMax';
 
 interface CurrentSessionViewProps {
@@ -91,6 +96,7 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
 
   const exerciseMap = new Map(exercises.map((e) => [e.id, e]));
+  const finisherSuggestions = getFinisherSuggestionIds(exercises);
 
   // Empty State when no session is currently ACTIVE
   if (!activeSession) {
@@ -321,7 +327,7 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
             onClick={() => onQuickSwitch(evalResult.suggestedReplacementId!)}
             className="inline-flex items-center gap-1 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-bold text-emerald-300 active:scale-95 transition"
           >
-            <Wand2 className="h-3.5 w-3.5" /> Switch → {repEx.name}
+            <Wand2 className="h-3.5 w-3.5" /> Switch → {repEx.shortName ?? repEx.name}
           </button>
         )}
       </div>
@@ -598,23 +604,20 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
             </div>
 
             {editingBlockId === 'PRIMARY' && (
-              <select
+              <ExercisePicker
+                exercises={exercises}
                 value={activeSession.primaryLiftId}
-                onChange={(e) => {
+                sheetTitle="Swap primary lift"
+                suggestedIds={primaryLiftSuggestions(activeSession.splitType)}
+                suggestedLabel={`Recommended for ${SPLIT_SHORT_LABELS[activeSession.splitType]}`}
+                onChange={(id) => {
                   onUpdateActiveSession({
                     ...activeSession,
-                    primaryLiftId: e.target.value,
+                    primaryLiftId: id,
                   });
                   setEditingBlockId(null);
                 }}
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-bold text-white"
-              >
-                {exercises.map((ex) => (
-                  <option key={ex.id} value={ex.id}>
-                    {ex.name} (Axial {ex.axialLoadScore})
-                  </option>
-                ))}
-              </select>
+              />
             )}
 
             {renderCompactSlotStatus(primaryEval, (repId) =>
@@ -890,9 +893,12 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                         </div>
 
                         {isEditing && (
-                          <select
-                            value={ex?.id ?? ''}
-                            onChange={(e) =>
+                          <ExercisePicker
+                            exercises={exercises}
+                            value={ex?.id}
+                            size="sm"
+                            sheetTitle={`Swap exercise ${bIdx + 1}${slot}`}
+                            onChange={(pickedId) =>
                               onUpdateActiveSession({
                                 ...activeSession,
                                 supersets: activeSession.supersets.map((s) =>
@@ -902,21 +908,14 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                                         supersetPairId: undefined,
                                         customName: 'Custom Pairing',
                                         ...(slot === 'A'
-                                          ? { exerciseAId: e.target.value }
-                                          : { exerciseBId: e.target.value }),
+                                          ? { exerciseAId: pickedId }
+                                          : { exerciseBId: pickedId }),
                                       }
                                     : s
                                 ),
                               })
                             }
-                            className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs font-bold text-white"
-                          >
-                            {exercises.map((o) => (
-                              <option key={o.id} value={o.id}>
-                                {o.name}
-                              </option>
-                            ))}
-                          </select>
+                          />
                         )}
 
                         {renderCompactSlotStatus(slotEval, (repId) =>
@@ -1051,26 +1050,26 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                   className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-3.5 space-y-3"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <select
-                      value={fin.exerciseId}
-                      onChange={(e) =>
-                        onUpdateActiveSession({
-                          ...activeSession,
-                          finishers: activeSession.finishers.map((f) =>
-                            f.id === fin.id
-                              ? { ...f, exerciseId: e.target.value }
-                              : f
-                          ),
-                        })
-                      }
-                      className="flex-1 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-bold text-white"
-                    >
-                      {exercises.map((o) => (
-                        <option key={o.id} value={o.id}>
-                          {o.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="min-w-0 flex-1">
+                      <ExercisePicker
+                        exercises={exercises}
+                        value={fin.exerciseId}
+                        size="sm"
+                        sheetTitle="Choose finisher"
+                        suggestedIds={finisherSuggestions}
+                        suggestedLabel="Finisher favourites"
+                        onChange={(pickedId) =>
+                          onUpdateActiveSession({
+                            ...activeSession,
+                            finishers: activeSession.finishers.map((f) =>
+                              f.id === fin.id
+                                ? { ...f, exerciseId: pickedId }
+                                : f
+                            ),
+                          })
+                        }
+                      />
+                    </div>
                     {activeSession.finishers.length > 1 && (
                       <button
                         type="button"

@@ -41,6 +41,11 @@ import {
   getWeeklySetCeiling,
   rankSupersetsForSession,
 } from '../../domain/engine/rulesEngine';
+import {
+  getFinisherSuggestionIds,
+  getPrimaryLiftSuggestionIds,
+} from '../../domain/catalog/pickerOptions';
+import { ExercisePicker, SupersetPicker } from '../components/ExercisePicker';
 
 interface PlanViewProps {
   plan: PlanConfig;
@@ -78,6 +83,7 @@ export const PlanView: React.FC<PlanViewProps> = ({
   const [showLoadingPanel, setShowLoadingPanel] = useState<boolean>(false);
 
   const exerciseMap = new Map(exercises.map((e) => [e.id, e]));
+  const finisherSuggestions = getFinisherSuggestionIds(exercises);
   const sortedPlanned = [...plannedSessions].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
@@ -227,7 +233,7 @@ export const PlanView: React.FC<PlanViewProps> = ({
               className="inline-flex items-center gap-1 rounded-lg bg-zinc-900 hover:bg-emerald-500 hover:text-zinc-950 border border-zinc-700 px-2.5 py-1 text-xs font-bold text-emerald-300 active:scale-95 transition"
             >
               <Wand2 className="h-3.5 w-3.5" />
-              Switch → {replacementEx.name}
+              Switch → {replacementEx.shortName ?? replacementEx.name}
             </button>
           )}
         </div>
@@ -600,22 +606,19 @@ export const PlanView: React.FC<PlanViewProps> = ({
                       <div className="text-xs font-bold uppercase tracking-wider text-emerald-400">
                         1. Primary Anchor Lift
                       </div>
-                      <select
+                      <ExercisePicker
+                        exercises={exercises}
                         value={session.primaryLiftId}
-                        onChange={(e) =>
+                        sheetTitle="Choose primary lift"
+                        suggestedIds={getPrimaryLiftSuggestionIds(session.splitType)}
+                        suggestedLabel={`Recommended for ${SPLIT_SHORT_LABELS[session.splitType]}`}
+                        onChange={(id) =>
                           onSaveSession({
                             ...session,
-                            primaryLiftId: e.target.value,
+                            primaryLiftId: id,
                           })
                         }
-                        className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-bold text-white"
-                      >
-                        {exercises.map((ex) => (
-                          <option key={ex.id} value={ex.id}>
-                            {ex.name} (Axial {ex.axialLoadScore})
-                          </option>
-                        ))}
-                      </select>
+                      />
 
                       {renderSlotBadgeAndQuickSwitch(primaryEval, (repId) =>
                         onSaveSession({ ...session, primaryLiftId: repId })
@@ -694,11 +697,20 @@ export const PlanView: React.FC<PlanViewProps> = ({
                             className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3.5 space-y-3"
                           >
                             <div className="flex flex-wrap items-center justify-between gap-2">
-                              <select
-                                value={ss.supersetPairId ?? 'CUSTOM'}
-                                onChange={(e) => {
+                              <SupersetPicker
+                                className="flex-1 min-w-[200px]"
+                                supersets={curatedSupersets}
+                                exercises={exercises}
+                                value={ss.supersetPairId}
+                                eyebrow={`Superset #${idx + 1}`}
+                                sheetTitle={`Superset #${idx + 1} preset`}
+                                suggestedIds={rankedCurated
+                                  .slice(0, 3)
+                                  .map((r) => r.superset.id)}
+                                suggestedLabel="Best fit for this session"
+                                onChange={(pickedId) => {
                                   const picked = curatedSupersets.find(
-                                    (c) => c.id === e.target.value
+                                    (c) => c.id === pickedId
                                   );
                                   if (!picked) return;
                                   onSaveSession({
@@ -716,17 +728,7 @@ export const PlanView: React.FC<PlanViewProps> = ({
                                     ),
                                   });
                                 }}
-                                className="flex-1 min-w-[180px] rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs font-bold text-emerald-300"
-                              >
-                                <option value="CUSTOM">
-                                  SS #{idx + 1}: Custom Pairing
-                                </option>
-                                {curatedSupersets.map((c) => (
-                                  <option key={c.id} value={c.id}>
-                                    Preset: {c.name}
-                                  </option>
-                                ))}
-                              </select>
+                              />
 
                               <div className="flex items-center gap-1.5">
                                 <button
@@ -787,13 +789,12 @@ export const PlanView: React.FC<PlanViewProps> = ({
                                     key={slot}
                                     className="rounded-xl border border-zinc-800/80 bg-zinc-950/70 p-2.5"
                                   >
-                                    <div className="text-[10px] font-bold uppercase text-zinc-400 mb-1">
-                                      Exercise {idx + 1}
-                                      {slot}
-                                    </div>
-                                    <select
+                                    <ExercisePicker
+                                      exercises={exercises}
                                       value={exId}
-                                      onChange={(e) =>
+                                      eyebrow={`Exercise ${idx + 1}${slot}`}
+                                      sheetTitle={`Exercise ${idx + 1}${slot}`}
+                                      onChange={(pickedId) =>
                                         onSaveSession({
                                           ...session,
                                           supersets: session.supersets.map(
@@ -805,27 +806,14 @@ export const PlanView: React.FC<PlanViewProps> = ({
                                                     customName:
                                                       'Custom Pairing',
                                                     ...(slot === 'A'
-                                                      ? {
-                                                          exerciseAId:
-                                                            e.target.value,
-                                                        }
-                                                      : {
-                                                          exerciseBId:
-                                                            e.target.value,
-                                                        }),
+                                                      ? { exerciseAId: pickedId }
+                                                      : { exerciseBId: pickedId }),
                                                   }
                                                 : b
                                           ),
                                         })
                                       }
-                                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs font-bold text-white"
-                                    >
-                                      {exercises.map((ex) => (
-                                        <option key={ex.id} value={ex.id}>
-                                          {ex.name}
-                                        </option>
-                                      ))}
-                                    </select>
+                                    />
                                     {renderSlotBadgeAndQuickSwitch(
                                       slotEval,
                                       (repId) =>
@@ -902,29 +890,27 @@ export const PlanView: React.FC<PlanViewProps> = ({
                               className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-2.5 space-y-1.5"
                             >
                               <div className="flex items-center gap-2">
-                                <select
+                                <ExercisePicker
+                                  className="flex-1 min-w-0"
+                                  exercises={exercises}
                                   value={fin.exerciseId}
-                                  onChange={(e) =>
+                                  sheetTitle="Choose finisher"
+                                  suggestedIds={finisherSuggestions}
+                                  suggestedLabel="Finisher favourites"
+                                  onChange={(pickedId) =>
                                     onSaveSession({
                                       ...session,
                                       finishers: session.finishers.map((f) =>
                                         f.id === fin.id
                                           ? {
                                               ...f,
-                                              exerciseId: e.target.value,
+                                              exerciseId: pickedId,
                                             }
                                           : f
                                       ),
                                     })
                                   }
-                                  className="flex-1 rounded-xl border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs font-bold text-white"
-                                >
-                                  {exercises.map((ex) => (
-                                    <option key={ex.id} value={ex.id}>
-                                      {ex.name}
-                                    </option>
-                                  ))}
-                                </select>
+                                />
                                 {session.finishers.length > 1 && (
                                   <button
                                     type="button"

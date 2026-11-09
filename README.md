@@ -2,6 +2,10 @@
 
 A local-first Progressive Web Application (PWA) for planning modular gym sessions (**Primary Lift $\rightarrow$ 2–4 Supersets $\rightarrow$ 1–2 Finishers**), tracking main compound lift progression, and dynamically guarding against **axial spinal overload**, **competing superset fatigue**, **48-hour short-turnaround conflicts**, and **weekly/fortnightly muscle volume imbalances**.
 
+**Live app (GitHub Pages):** https://piwi-code.github.io/beast-mode/ — installable as a PWA from your phone's browser ("Add to Home Screen").
+
+> **Status: pre-alpha / proof of concept.** Changes are committed directly to `main`, which auto-deploys to GitHub Pages. Once the POC phase is complete, `main` will be locked down and all changes will go through pull requests. See [Development Workflow](docs/ROADMAP.md#development-workflow).
+
 ## Key Features
 
 - **Flexible Schedule & Split Sequencer**:
@@ -15,6 +19,8 @@ A local-first Progressive Web Application (PWA) for planning modular gym session
   2. **Antagonist / Non-Competing Mandate**: Flags intra-session muscle stacking (e.g., Flat Bench + Incline DB Press) and grip-tax clashes.
   3. **Rolling 48-Hour Recovery Lookback**: Warns when a muscle group exceeds `6` working sets within 48 hours (e.g. Solo Upper $\rightarrow$ Lower $\rightarrow$ Buddy Upper) and recommends joint-friendly/lengthened alternatives.
   4. **7-Day & 14-Day Muscle Volume Balance**: Tracks working sets across weekly and fortnightly windows so supersets are allocated evenly without overtraining.
+- **Touch-Friendly Exercise Picker**:
+  - Search by name, muscle or equipment, filter by equipment, and browse by muscle-group sub-headings (supersets appear under both muscle groups). Every option shows a plain-language name, a one-line description, and labels such as equipment, main lift, and spine load.
 - **Main Lift Progression Tracker**:
   - Logs sets, reps, weight (kg), and RPE for primary lifts and accessories, with automatic **Estimated 1RM (Epley)** calculation and historical charts.
 - **Clean, Backend-Ready Architecture**:
