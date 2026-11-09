@@ -45,10 +45,12 @@ export const SEED_EXERCISES: Exercise[] = [
     formTips: [
       'Keep wrists stacked directly over elbows',
       'Maintain glute and upper-back contact with bench',
-      'Use an active spotter on Buddy Upper heavy top sets',
+      'Only push heavy top sets with a spotter (tick "Buddy" on the session)',
     ],
     isPrimaryAnchorCandidate: true,
     mainLiftCategory: 'BENCH',
+    needsSpotter: true,
+    soloAlternativeId: 'db_flat_bench',
     defaultSets: 4,
     defaultReps: '5-8',
   },
@@ -410,7 +412,7 @@ export const SEED_EXERCISES: Exercise[] = [
     axialLoadScore: 0,
     gripTax: 1,
     jointStressLevel: 1,
-    runnerBenefitNote: 'Zero lower-back shear; ideal for 36h turnaround Buddy Upper sessions.',
+    runnerBenefitNote: 'Zero lower-back shear; ideal for quick 36h turnaround Upper sessions.',
     executionDirections:
       'Lie chest-down on a 30–45° incline bench, let dumbbells hang straight down, and row elbows back toward hips with a pause at peak contraction.',
     formTips: [
@@ -630,7 +632,7 @@ export const SEED_SUPERSETS: SupersetPair[] = [
     executionNotes:
       'Perform 10–12 controlled reps on Seated Hamstring Curl, then step directly to Standing Calf Raise for 12–15 reps with a 2-second bottom stretch.',
     buddyFriendly: true,
-    recommendedSplits: ['BUDDY_LOWER', 'SOLO_LOWER', 'PPL_LEGS'],
+    recommendedSplits: ['LOWER', 'PPL_LEGS'],
   },
   {
     id: 'ss_lat_core_decompression',
@@ -644,7 +646,7 @@ export const SEED_SUPERSETS: SupersetPair[] = [
     executionNotes:
       'Partner A completes 10–12 Neutral-Grip Lat Pulldowns while Partner B performs 12–15 Captain’s Chair Pelvic Curls, then swap immediately.',
     buddyFriendly: true,
-    recommendedSplits: ['BUDDY_LOWER', 'SOLO_LOWER', 'PPL_LEGS', 'PPL_PULL'],
+    recommendedSplits: ['LOWER', 'PPL_LEGS', 'PPL_PULL'],
   },
   {
     id: 'ss_row_cable_fly',
@@ -658,7 +660,7 @@ export const SEED_SUPERSETS: SupersetPair[] = [
     executionNotes:
       'One partner rows on the Chest-Supported Machine while the other performs Low-to-High Cable Flyes; swap stations with ~30s transition.',
     buddyFriendly: true,
-    recommendedSplits: ['BUDDY_UPPER', 'SOLO_UPPER', 'PPL_PUSH', 'PPL_PULL'],
+    recommendedSplits: ['UPPER', 'PPL_PUSH', 'PPL_PULL'],
   },
   {
     id: 'ss_lunges_hammer_curls',
@@ -672,7 +674,7 @@ export const SEED_SUPERSETS: SupersetPair[] = [
     executionNotes:
       'Complete 10 lunges per leg down the turf/floor, rest 20 seconds, then knock out 10–12 Standing Hammer Curls with the same dumbbells.',
     buddyFriendly: false,
-    recommendedSplits: ['SOLO_LOWER', 'PPL_LEGS'],
+    recommendedSplits: ['LOWER', 'PPL_LEGS'],
   },
   {
     id: 'ss_shared_bench_arms',
@@ -686,7 +688,7 @@ export const SEED_SUPERSETS: SupersetPair[] = [
     executionNotes:
       'Keep one adjustable bench and two pairs of dumbbells/EZ-bar. Alternate Skull Crushers and Seated Curls for 2–3 pump sets.',
     buddyFriendly: true,
-    recommendedSplits: ['BUDDY_UPPER', 'SOLO_UPPER', 'PPL_PUSH', 'PPL_PULL'],
+    recommendedSplits: ['UPPER', 'PPL_PUSH', 'PPL_PULL'],
   },
   {
     id: 'ss_incline_row_lateral_delt',
@@ -700,7 +702,7 @@ export const SEED_SUPERSETS: SupersetPair[] = [
     executionNotes:
       'Ideal when benching within 36–48h of a prior upper session. Zero lower-back or tricep tax.',
     buddyFriendly: true,
-    recommendedSplits: ['BUDDY_UPPER', 'SOLO_UPPER', 'PPL_PULL', 'PPL_PUSH'],
+    recommendedSplits: ['UPPER', 'PPL_PULL', 'PPL_PUSH'],
   },
   {
     id: 'ss_cable_delt_tricep',
@@ -714,7 +716,7 @@ export const SEED_SUPERSETS: SupersetPair[] = [
     executionNotes:
       'Claim one cable pulley column; perform Single-Arm Lateral Raises, slide pulley to top for Rope Pushdowns.',
     buddyFriendly: false,
-    recommendedSplits: ['SOLO_UPPER', 'PPL_PUSH', 'BUDDY_UPPER'],
+    recommendedSplits: ['UPPER', 'PPL_PUSH'],
   },
   {
     id: 'ss_quad_core_reset',
@@ -728,15 +730,16 @@ export const SEED_SUPERSETS: SupersetPair[] = [
     executionNotes:
       '12–15 Seated Leg Extensions with a 1s top hold paired with 12–15 controlled Bench Reverse Curls.',
     buddyFriendly: true,
-    recommendedSplits: ['SOLO_LOWER', 'BUDDY_LOWER', 'PPL_LEGS'],
+    recommendedSplits: ['LOWER', 'PPL_LEGS'],
   },
 ];
 
 export const DEFAULT_PLAN_CONFIG: PlanConfig = {
   id: 'default_plan',
-  name: 'Buddy Upper / Lower (4-Session Split)',
+  name: 'Upper / Lower (4-Session Split)',
   scheduleFamily: 'UPPER_LOWER',
-  upperLowerVariant: 'BUDDY_ONLY',
+  // Safety-first default: no spotter assumed until the user marks their buddy days.
+  buddyDays: [],
   sessionsPerWeek: 4,
   targetSupersetsPerSession: 2,
   targetFinishersPerSession: 1,

@@ -14,7 +14,7 @@ The application solves key pain points that standard fitness trackers overlook:
 2. **Cumulative Fatigue & Safety Safeguards**:
    - Dynamically monitor **Axial Loading** (spinal compression), **Joint Shear**, **Grip Fatigue**, and **Intra-Session Muscle Overlap** (e.g., Flat Barbell Bench + Incline DB Press) to alert users when a chosen pairing or subsequent exercise overtaxes pre-fatigued structures.
 3. **Rolling Recovery Lookback (36–48h Windows)**:
-   - When sessions happen with short turnaround (e.g., `SOLO_UPPER` $\rightarrow$ `SOLO_LOWER` $\rightarrow$ `BUDDY_UPPER` within 36–48 hours), the engine flags conflicting muscle groups (e.g., triceps/front delts pre-fatigued from benching) and shifts recommendations to joint-friendly or antagonist variations.
+   - When sessions happen with short turnaround (e.g., Upper $\rightarrow$ Lower $\rightarrow$ Upper within 36–48 hours), the engine flags conflicting muscle groups (e.g., triceps/front delts pre-fatigued from benching) and shifts recommendations to joint-friendly or antagonist variations.
 4. **Weekly & Fortnightly Muscle Volume Distribution (7-Day & 14-Day Windows)**:
    - Track working sets per muscle region over rolling 7-day and 14-day periods so that supersets are allocated with an even spread of focus and avoid overtraining a single region.
 5. **Running-Specific Integration**:
@@ -32,42 +32,50 @@ Classic rolling split separating movement planes. Works across 2, 3, or 4 sessio
 - **Pull Day (`PPL_PULL`)**: Vertical pulls (Lat Pulldowns, Pull-ups), horizontal rows, rear delts, and bicep volume.
 - **Leg Day (`PPL_LEGS`)**: Knee-dominant compound (Back Squat), posterior chain hinge (Deadlift/RDL), hamstring curls, calf raises, core decompression, and turf sled finisher.
 
-### Split 2: Buddy Upper / Lower Split (Partner Optimized)
-Structured for 2, 3, or 4 sessions/week (`BUDDY_UPPER` $\leftrightarrow$ `BUDDY_LOWER`) to minimize station contention and maximize gym-partner flow:
-- **Upper Day (`BUDDY_UPPER`)**:
-  - **Primary**: Flat Barbell Bench Press (heavy alternating sets with active spotter).
-  - **Superset 1**: Antagonist Machine Row (Narrow/Neutral grip) paired with Low-to-High Cable Flyes (one partner rows while the other flyes; instantaneous swap).
+### Split 2: Upper / Lower
+Structured for 2, 3, or 4 sessions/week (`UPPER` $\leftrightarrow$ `LOWER`):
+- **Upper Day (`UPPER`)**:
+  - **Primary**: Flat Barbell Bench Press on buddy sessions (spotted heavy sets); Flat Dumbbell Bench Press on solo sessions.
+  - **Superset 1**: Antagonist Machine Row (Narrow/Neutral grip) paired with Low-to-High Cable Flyes (with a buddy: one partner rows while the other flyes; instantaneous swap).
   - **Superset 2**: Shared bench station — Dumbbell/EZ-Bar Skull Crushers paired with Seated Isolated Curls.
   - **Optional Superset 3 / 4**: Cable Lateral Raises + Tricep Rope Pushdowns or Postural Back work.
   - **Finisher**: High-Pulley Long-Rope Face Pulls for external rotation and postural reset.
-- **Lower Day (`BUDDY_LOWER`)**:
-  - **Primary**: Barbell Back Squat (heavy alternating sets with spotter).
+- **Lower Day (`LOWER`)**:
+  - **Primary**: Barbell Back Squat, flip-flopping with Deadlift on consecutive Lower sessions.
   - **Superset 1**: Seated Machine Hamstring Curls paired with Standing Deficit Machine Calf Raises (spares the spine after squats).
   - **Superset 2**: Neutral-Grip Lat Pulldown paired with Captain's Chair Knee Raises (decompresses the lumbar spine after heavy axial load).
-  - **Finisher**: Turf Sled "Down & Back" rounds (Buddy A pushes/pulls while Buddy B times/rests).
+  - **Finisher**: Turf Sled "Down & Back" rounds (with a buddy: Buddy A pushes/pulls while Buddy B times/rests).
 
-### Split 3: Hybrid Solo + Buddy Upper / Lower (4-Session Active Split)
-Accounts for solo sessions early in the week followed by quick-turnaround partner sessions:
-- **Session 1 — `SOLO_UPPER`**: Dumbbell bench or Barbell Bench focus, single-arm/machine cable work, arm pump stations.
-- **Session 2 — `SOLO_LOWER`**: Barbell Back Squat (or RDL), Dumbbell Walking Lunges paired with DB Hammer Curls, Sled Finisher.
-- **Session 3 — `BUDDY_UPPER` (36–48h turnaround)**: Flat Barbell Bench, Incline/Chest-Supported Rows, Cable Lateral Raises, Long-Rope Face Pulls.
-- **Session 4 — `BUDDY_LOWER`**: Barbell Back Squats, Machine Hamstring Flexion, Standing Deficit Calves, Lat Pulldowns, Core Decompression, Sled Finisher.
+### Buddy vs. Solo Sessions (Spotter Availability)
+Buddy availability is **not** a split type. It is a per-session flag (`WorkoutSession.withBuddy`) that applies to every split, PPL included:
+- **Buddy days** (`PlanConfig.buddyDays`, set in Settings as weekdays): new sessions planned on these days start with `withBuddy: true`; all other days start solo. Any session can be ticked Buddy/Solo individually in the Plan and Current Session views.
+- **Buddy session** = a spotter is present. Spotter-dependent lifts (any barbell bench press, flagged `needsSpotter` on the exercise) are allowed and recommended, and partner-friendly superset stations (`buddyFriendly`) are ranked higher.
+- **Solo session** = no spotter. Auto-selection never picks a `needsSpotter` lift; it uses the exercise's `soloAlternativeId` instead (Barbell Bench $\rightarrow$ Dumbbell Bench). Superset defaults favour self-contained single-station pairs.
+- **Switching a session to Solo** swaps spotter-dependent lifts for their solo alternatives. Switching to Buddy leaves exercises unchanged.
+- **Safety warning (Rule 0 below)**: manually choosing a `needsSpotter` lift on a solo session is allowed but flagged.
+
+Data saved by earlier versions with `BUDDY_UPPER` / `BUDDY_LOWER` / `SOLO_UPPER` / `SOLO_LOWER` splits is migrated on load to `UPPER` / `LOWER` + `withBuddy`; the old plan-level `upperLowerVariant` becomes `buddyDays` (Buddy-only $\rightarrow$ every day, otherwise none).
 
 ### Next-Session Sequencer Logic
 As sessions are logged, the engine inspects the most recent completed session and active plan:
 - **Upper / Lower (2, 3, or 4 days/week)**:
-  - If previous session was Lower (`SOLO_LOWER` or `BUDDY_LOWER`), suggest Upper (`SOLO_UPPER` or `BUDDY_UPPER` depending on schedule mode and day index).
+  - If previous session was Lower (`LOWER`), suggest Upper (`UPPER`).
   - If previous session was Upper, suggest Lower.
 - **PPL (2, 3, or 4 days/week)**:
   - Cycles `PPL_PUSH` $\rightarrow$ `PPL_PULL` $\rightarrow$ `PPL_LEGS` $\rightarrow$ `PPL_PUSH`.
 - **Primary Lift Suggestion**:
-  - Automatically selects the default primary anchor lift for the suggested session (e.g., `bb_flat_bench` for Upper/Push, `bb_back_squat` for Lower/Legs, `weighted_pullup` or `bb_pendlay_row` for Pull) while offering valid alternative anchor lifts.
+  - Automatically selects the default primary anchor lift for the suggested session (e.g., `bb_flat_bench` for Upper/Push on buddy sessions or `db_flat_bench` when solo, `bb_back_squat` for Lower/Legs, `weighted_pullup` or `bb_pendlay_row` for Pull) while offering valid alternative anchor lifts.
 
 ---
 
 ## 3. Rules Engine: Thresholds & Constraints
 
 The application executes dynamic validation checks in real time as exercises, supersets, and finishers are added to a session:
+
+### Rule 0: Spotter Required (Safety)
+- **Definition**: Exercises flagged `needsSpotter` (any barbell bench press) should not be pushed hard without a spotter.
+- **Trigger**: The exercise is in a session where `withBuddy` is false.
+- **Result**: Slot health `NEEDS_SPOTTER` (red, person-with-cross icon, takes priority over other flags) plus a critical `SPOTTER_REQUIRED` safeguard alert. Quick Switch offers the exercise's `soloAlternativeId` (e.g., Dumbbell Bench). Ticking Buddy on the session clears it.
 
 ### Rule 1: Axial Load Ceiling (Spinal Compression Limit)
 - **Definition**: Heavy spinal loading from compressive movements (Back Squats, Barbell Deadlifts, Barbell RDLs, Standing Overhead Barbell Press).

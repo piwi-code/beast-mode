@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import { Check, ChevronsUpDown, Search, X } from 'lucide-react';
 import { BottomSheet } from './BottomSheet';
+import { MultiSelectFilter } from './MultiSelectFilter';
 import {
   PickerFilter,
   PickerGroup,
@@ -101,7 +102,9 @@ export const SelectSheet: React.FC<SelectSheetProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [filterId, setFilterId] = useState<string | null>(null);
+  const [filterIds, setFilterIds] = useState<string[]>([]);
+  // True while the nested equipment filter sheet is open (it owns the keyboard).
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
 
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -115,10 +118,10 @@ export const SelectSheet: React.FC<SelectSheetProps> = ({
 
   // ----- Build visible sections -------------------------------------------
   const sections: Section[] = useMemo(() => {
-    const visible = searchOptions(filterOptionsByKey(options, filterId), query);
+    const visible = searchOptions(filterOptionsByKey(options, filterIds), query);
     const result: Section[] = [];
 
-    const isBrowsing = !query.trim() && !filterId;
+    const isBrowsing = !query.trim() && filterIds.length === 0;
     if (isBrowsing && suggestedIds?.length) {
       const byId = new Map(visible.map((o) => [o.id, o]));
       const suggested = suggestedIds
@@ -148,7 +151,7 @@ export const SelectSheet: React.FC<SelectSheetProps> = ({
     const other = visible.filter((o) => !o.groupIds.some((id) => known.has(id)));
     if (other.length) result.push({ key: '__other', label: 'Other', options: other });
     return result;
-  }, [options, filterId, query, suggestedIds, suggestedLabel, groups]);
+  }, [options, filterIds, query, suggestedIds, suggestedLabel, groups]);
 
   const flat = useMemo(
     () =>
@@ -167,7 +170,7 @@ export const SelectSheet: React.FC<SelectSheetProps> = ({
   const close = useCallback(() => {
     setOpen(false);
     setQuery('');
-    setFilterId(null);
+    setFilterIds([]);
     // Return focus to the trigger for keyboard users.
     requestAnimationFrame(() => triggerRef.current?.focus());
   }, []);
@@ -197,7 +200,7 @@ export const SelectSheet: React.FC<SelectSheetProps> = ({
   useEffect(() => {
     if (open) setActiveIndex(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, filterId]);
+  }, [query, filterIds]);
 
   // Keep keyboard highlight visible.
   useEffect(() => {
@@ -211,6 +214,7 @@ export const SelectSheet: React.FC<SelectSheetProps> = ({
   }, [activeIndex, flat, open]);
 
   const onKeyDown = (e: KeyboardEvent) => {
+    if (filterSheetOpen) return;
     if (e.key === 'Escape') {
       e.preventDefault();
       close();
@@ -334,27 +338,25 @@ export const SelectSheet: React.FC<SelectSheetProps> = ({
         </div>
       </div>
 
-      {/* Filter chips */}
+      {/* Equipment (multi-select) filter */}
       {filters && filters.length > 0 && (
-        <div className="flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-3 [scrollbar-width:none]">
-          {[{ id: null as string | null, label: 'All' }, ...filters].map((f) => {
-            const active = filterId === f.id;
-            return (
-              <button
-                key={f.id ?? '__all'}
-                type="button"
-                onClick={() => setFilterId(f.id)}
-                aria-pressed={active}
-                className={`h-9 shrink-0 rounded-full border px-3.5 text-xs font-bold transition ${
-                  active
-                    ? 'border-emerald-500 bg-emerald-500 text-zinc-950'
-                    : 'border-zinc-700 bg-zinc-950 text-zinc-300 hover:text-white'
-                }`}
-              >
-                {f.label}
-              </button>
-            );
-          })}
+        <div className="flex shrink-0 items-center gap-2 px-4 pb-3">
+          <MultiSelectFilter
+            label="Equipment"
+            options={filters}
+            selected={filterIds}
+            onChange={setFilterIds}
+            onOpenChange={setFilterSheetOpen}
+          />
+          {filterIds.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setFilterIds([])}
+              className="h-11 px-1 text-xs font-bold text-emerald-400 hover:text-emerald-300"
+            >
+              Clear
+            </button>
+          )}
         </div>
       )}
 
@@ -374,7 +376,7 @@ export const SelectSheet: React.FC<SelectSheetProps> = ({
               className="font-bold text-emerald-400"
               onClick={() => {
                 setQuery('');
-                setFilterId(null);
+                setFilterIds([]);
               }}
             >
               Clear search

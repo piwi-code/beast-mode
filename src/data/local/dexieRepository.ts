@@ -10,6 +10,10 @@ import {
   SEED_EXERCISES,
   SEED_SUPERSETS,
 } from '../../domain/seed/catalog';
+import {
+  normalizePlanConfig,
+  normalizeSession,
+} from '../../domain/engine/splits';
 import { AppDataSnapshot, IWorkoutRepository } from '../interfaces/repositories';
 
 class BeastModeDexieDB extends Dexie {
@@ -54,7 +58,11 @@ export class DexieWorkoutRepository implements IWorkoutRepository {
 
   async getPlanConfig(): Promise<PlanConfig> {
     const existing = await this.db.plans.get('default_plan');
-    if (existing) return existing;
+    if (existing) {
+      const normalized = normalizePlanConfig(existing);
+      if (normalized !== existing) await this.db.plans.put(normalized);
+      return normalized;
+    }
     await this.db.plans.put(DEFAULT_PLAN_CONFIG);
     return DEFAULT_PLAN_CONFIG;
   }
@@ -68,7 +76,7 @@ export class DexieWorkoutRepository implements IWorkoutRepository {
   }
 
   async getSessions(): Promise<WorkoutSession[]> {
-    const list = await this.db.sessions.toArray();
+    const list = (await this.db.sessions.toArray()).map(normalizeSession);
     return list.sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
@@ -109,11 +117,13 @@ export class DexieWorkoutRepository implements IWorkoutRepository {
       this.db.customSupersets,
       async () => {
         if (snapshot.plan) {
-          await this.db.plans.put({ ...snapshot.plan, id: 'default_plan' });
+          await this.db.plans.put(
+            normalizePlanConfig({ ...snapshot.plan, id: 'default_plan' })
+          );
         }
         if (Array.isArray(snapshot.sessions)) {
           await this.db.sessions.clear();
-          await this.db.sessions.bulkPut(snapshot.sessions);
+          await this.db.sessions.bulkPut(snapshot.sessions.map(normalizeSession));
         }
         if (Array.isArray(snapshot.customExercises)) {
           await this.db.customExercises.clear();
@@ -138,7 +148,8 @@ export class DexieWorkoutRepository implements IWorkoutRepository {
       {
         id: 'demo_session_0_deadlift',
         date: new Date(now - 12 * 24 * hourMs).toISOString(),
-        splitType: 'BUDDY_LOWER',
+        splitType: 'LOWER',
+        withBuddy: true,
         primaryLiftId: 'bb_deadlift',
         primaryLiftSets: [
           { setNumber: 1, weightKg: 120, reps: 5, rpe: 7.5, completed: true },
@@ -203,7 +214,8 @@ export class DexieWorkoutRepository implements IWorkoutRepository {
       {
         id: 'demo_session_1',
         date: new Date(now - 9 * 24 * hourMs).toISOString(),
-        splitType: 'BUDDY_UPPER',
+        splitType: 'UPPER',
+        withBuddy: true,
         primaryLiftId: 'bb_flat_bench',
         primaryLiftSets: [
           { setNumber: 1, weightKg: 80, reps: 8, rpe: 7.5, completed: true },
@@ -269,7 +281,8 @@ export class DexieWorkoutRepository implements IWorkoutRepository {
       {
         id: 'demo_session_2',
         date: new Date(now - 5 * 24 * hourMs).toISOString(),
-        splitType: 'BUDDY_LOWER',
+        splitType: 'LOWER',
+        withBuddy: true,
         primaryLiftId: 'bb_back_squat',
         primaryLiftSets: [
           { setNumber: 1, weightKg: 105, reps: 6, rpe: 7.5, completed: true },
@@ -335,7 +348,8 @@ export class DexieWorkoutRepository implements IWorkoutRepository {
       {
         id: 'demo_session_3',
         date: new Date(now - 2 * 24 * hourMs).toISOString(),
-        splitType: 'BUDDY_UPPER',
+        splitType: 'UPPER',
+        withBuddy: true,
         primaryLiftId: 'bb_flat_bench',
         primaryLiftSets: [
           { setNumber: 1, weightKg: 82.5, reps: 7, rpe: 8, completed: true },
@@ -399,7 +413,8 @@ export class DexieWorkoutRepository implements IWorkoutRepository {
       {
         id: 'demo_planned_next_1',
         date: new Date(now + 1 * 24 * hourMs).toISOString(),
-        splitType: 'BUDDY_LOWER',
+        splitType: 'LOWER',
+        withBuddy: true,
         primaryLiftId: 'bb_back_squat',
         primaryLiftSets: [
           { setNumber: 1, weightKg: 112.5, reps: 6, rpe: 8, completed: false },
@@ -465,7 +480,8 @@ export class DexieWorkoutRepository implements IWorkoutRepository {
       {
         id: 'demo_planned_next_2',
         date: new Date(now + 3 * 24 * hourMs).toISOString(),
-        splitType: 'BUDDY_UPPER',
+        splitType: 'UPPER',
+        withBuddy: true,
         primaryLiftId: 'bb_flat_bench',
         primaryLiftSets: [
           { setNumber: 1, weightKg: 85, reps: 6, rpe: 8, completed: false },

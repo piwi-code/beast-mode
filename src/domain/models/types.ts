@@ -55,6 +55,10 @@ export interface Exercise {
   defaultSets?: number;
   defaultReps?: string;
   mainLiftCategory?: 'BENCH' | 'SQUAT' | 'DEADLIFT' | 'OTHER';
+  /** Unsafe to take to failure without a spotter (e.g. any barbell bench press). */
+  needsSpotter?: boolean;
+  /** Safer exercise to use when no buddy/spotter is present. */
+  soloAlternativeId?: string;
 }
 
 export type PairingType =
@@ -79,7 +83,11 @@ export interface SupersetPair {
 
 export type PlanScheduleFamily = 'UPPER_LOWER' | 'PPL';
 
+/** @deprecated Buddy availability is now per session (`WorkoutSession.withBuddy`) with weekday defaults (`PlanConfig.buddyDays`). Kept only to migrate old data. */
 export type UpperLowerVariant = 'BUDDY_ONLY' | 'HYBRID_SOLO_BUDDY' | 'SOLO_ONLY';
+
+/** Day of week, 0 = Sunday … 6 = Saturday (matches Date.getDay()). */
+export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export type SessionsPerWeek = 2 | 3 | 4;
 
@@ -89,7 +97,10 @@ export interface PlanConfig {
   id: string;
   name: string;
   scheduleFamily: PlanScheduleFamily;
-  upperLowerVariant: UpperLowerVariant;
+  /** Weekdays a training buddy (spotter) is usually available. New sessions on these days start with `withBuddy: true`. */
+  buddyDays: Weekday[];
+  /** @deprecated Legacy field, migrated into `buddyDays`. */
+  upperLowerVariant?: UpperLowerVariant;
   sessionsPerWeek: SessionsPerWeek;
   targetSupersetsPerSession: 2 | 3 | 4;
   targetFinishersPerSession: 1 | 2;
@@ -102,6 +113,11 @@ export type SessionSplitType =
   | 'PPL_PUSH'
   | 'PPL_PULL'
   | 'PPL_LEGS'
+  | 'UPPER'
+  | 'LOWER';
+
+/** Split ids stored by earlier versions, where buddy/solo was baked into the split. */
+export type LegacySessionSplitType =
   | 'BUDDY_UPPER'
   | 'BUDDY_LOWER'
   | 'SOLO_UPPER'
@@ -144,6 +160,8 @@ export interface WorkoutSession {
   id: string;
   date: string; // ISO string (YYYY-MM-DD or full ISO)
   splitType: SessionSplitType;
+  /** A buddy/spotter is training with you this session (enables spotted lifts, shared stations). */
+  withBuddy?: boolean;
   primaryLiftId: string;
   primaryLiftSets: LoggedSet[];
   supersets: SessionSupersetBlock[];
@@ -160,9 +178,11 @@ export interface WorkoutSession {
  * - WRONG_STYLE (Blue info): Exercise movement pattern doesn't match the session split
  * - PROJECTED_OVERWORK (Orange warning): Exceeds 48h recovery or 7d volume when combined with history + prior planned sessions
  * - INTRA_SESSION_OVERWORK (Red error): Overworked inside the current session (axial > 4, competing superset, or primary overlap)
+ * - NEEDS_SPOTTER (Red safety): Exercise needs a spotter but the session has no buddy
  */
 export type ExerciseSlotHealth =
   | 'OPTIMAL'
+  | 'NEEDS_SPOTTER'
   | 'WRONG_STYLE'
   | 'PROJECTED_OVERWORK'
   | 'INTRA_SESSION_OVERWORK';
@@ -184,7 +204,8 @@ export interface SafeguardAlert {
     | 'INTRA_SESSION_OVERLAP'
     | 'ROLLING_48H_RECOVERY'
     | 'WEEKLY_VOLUME_IMBALANCE'
-    | 'WRONG_SPLIT_STYLE';
+    | 'WRONG_SPLIT_STYLE'
+    | 'SPOTTER_REQUIRED';
   severity: ValidationSeverity;
   title: string;
   message: string;

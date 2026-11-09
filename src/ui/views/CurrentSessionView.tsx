@@ -14,6 +14,7 @@ import {
   Plus,
   ShieldAlert,
   Shuffle,
+  UserX,
   SlidersHorizontal,
   Sparkles,
   Split,
@@ -50,6 +51,12 @@ import {
   getPrimaryLiftSuggestionIds as primaryLiftSuggestions,
 } from '../../domain/catalog/pickerOptions';
 import { ExercisePicker } from '../components/ExercisePicker';
+import { BuddyBadge, BuddyToggle } from '../components/BuddyToggle';
+import {
+  ALL_SPLITS,
+  isBuddyDay,
+  setSessionBuddy,
+} from '../../domain/engine/splits';
 import { estimateOneRepMax } from '../../domain/engine/oneRepMax';
 
 interface CurrentSessionViewProps {
@@ -59,22 +66,12 @@ interface CurrentSessionViewProps {
   activeSession: WorkoutSession | null;
   plannedSessions: WorkoutSession[];
   completedSessions: WorkoutSession[];
-  onStartRecommendedSession: () => Promise<void>;
+  onStartRecommendedSession: (withBuddy?: boolean) => Promise<void>;
   onActivatePlannedSession: (session: WorkoutSession) => Promise<void>;
   onUpdateActiveSession: (session: WorkoutSession) => Promise<void>;
   onCompleteActiveSession: (session: WorkoutSession) => Promise<void>;
   onAbandonActiveSession: (sessionId: string) => Promise<void>;
 }
-
-const ALL_SPLITS: SessionSplitType[] = [
-  'BUDDY_UPPER',
-  'BUDDY_LOWER',
-  'SOLO_UPPER',
-  'SOLO_LOWER',
-  'PPL_PUSH',
-  'PPL_PULL',
-  'PPL_LEGS',
-];
 
 export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
   plan,
@@ -94,13 +91,22 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
   // Toggle for showing exercise swap dropdowns & pivot controls (hidden by default for clean gym-floor logging)
   const [showSessionOptions, setShowSessionOptions] = useState(false);
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  // Buddy availability for "Recommend & Start" (defaults from Settings → buddy days)
+  const [startWithBuddy, setStartWithBuddy] = useState(() =>
+    isBuddyDay(plan, new Date())
+  );
 
   const exerciseMap = new Map(exercises.map((e) => [e.id, e]));
   const finisherSuggestions = getFinisherSuggestionIds(exercises);
 
   // Empty State when no session is currently ACTIVE
   if (!activeSession) {
-    const suggestion = suggestNextSession(plan, completedSessions);
+    const suggestion = suggestNextSession(
+      plan,
+      completedSessions,
+      new Date(),
+      startWithBuddy
+    );
     const recPrimary = exerciseMap.get(suggestion.recommendedPrimaryLiftId);
 
     return (
@@ -125,8 +131,15 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
             </p>
           </div>
 
+          <div className="flex justify-center">
+            <BuddyToggle
+              checked={startWithBuddy}
+              onChange={setStartWithBuddy}
+            />
+          </div>
+
           <button
-            onClick={onStartRecommendedSession}
+            onClick={() => onStartRecommendedSession(startWithBuddy)}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 active:scale-[0.99] hover:bg-emerald-400 px-6 py-4 text-sm font-extrabold text-zinc-950 shadow-lg shadow-emerald-500/20 transition"
           >
             <Sparkles className="h-5 w-5" />
@@ -156,8 +169,11 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                           day: 'numeric',
                         })}
                       </div>
-                      <div className="text-base font-bold text-white truncate">
+                      <div className="flex items-center gap-1.5 text-base font-bold text-white truncate">
                         {SPLIT_SHORT_LABELS[ps.splitType]}
+                        <span className="text-xs font-semibold text-zinc-400">
+                          · {ps.withBuddy ? 'Buddy' : 'Solo'}
+                        </span>
                       </div>
                       <div className="text-xs text-zinc-400 truncate">
                         {pEx?.name} • {ps.supersets.length} Supersets
@@ -232,14 +248,22 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
   };
 
   const handlePivotWholeSession = async (newSplit: SessionSplitType) => {
-    const baseSuggestion = suggestNextSession(plan, completedSessions);
+    const withBuddy = Boolean(activeSession.withBuddy);
+    const baseSuggestion = suggestNextSession(
+      plan,
+      completedSessions,
+      new Date(activeSession.date),
+      withBuddy
+    );
     const rebuilt = buildDraftSessionFromSuggestion(
       {
         ...baseSuggestion,
         splitType: newSplit,
         splitLabel: SPLIT_LABELS[newSplit],
-        recommendedPrimaryLiftId:
-          getPrimaryLiftCandidatesForSplit(newSplit).recommended,
+        recommendedPrimaryLiftId: getPrimaryLiftCandidatesForSplit(
+          newSplit,
+          withBuddy
+        ).recommended,
       },
       exercises,
       curatedSupersets,
@@ -295,6 +319,7 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
 
     const colorMap: Record<ExerciseSlotEvaluation['health'], string> = {
       OPTIMAL: 'border-emerald-500/30 bg-emerald-950/30 text-emerald-300',
+      NEEDS_SPOTTER: 'border-red-500/60 bg-red-950/50 text-red-200',
       WRONG_STYLE: 'border-sky-500/40 bg-sky-950/40 text-sky-200',
       PROJECTED_OVERWORK: 'border-amber-500/50 bg-amber-950/40 text-amber-200',
       INTRA_SESSION_OVERWORK: 'border-red-500/60 bg-red-950/50 text-red-200',
@@ -315,6 +340,9 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
           )}
           {evalResult.health === 'INTRA_SESSION_OVERWORK' && (
             <ShieldAlert className="h-4 w-4 text-red-400 shrink-0" />
+          )}
+          {evalResult.health === 'NEEDS_SPOTTER' && (
+            <UserX className="h-4 w-4 text-red-400 shrink-0" />
           )}
           <span>
             {evalResult.headline}
@@ -462,8 +490,12 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                 Active Workout • {progressPct}% Done
               </span>
             </div>
-            <h2 className="text-base sm:text-lg font-extrabold text-white truncate">
+            <h2 className="flex items-center gap-2 text-base sm:text-lg font-extrabold text-white truncate">
               {SPLIT_SHORT_LABELS[activeSession.splitType]}
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-zinc-400">
+                <BuddyBadge withBuddy={activeSession.withBuddy} />·{' '}
+                {activeSession.withBuddy ? 'Buddy' : 'Solo'}
+              </span>
             </h2>
           </div>
 
@@ -491,6 +523,15 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
         {/* Collapsible Session Options Drawer (Pivot Split, Axial Load, Abandon) */}
         {showSessionOptions && (
           <div className="pt-3 border-t border-zinc-800 space-y-3">
+            <BuddyToggle
+              className="w-full"
+              checked={Boolean(activeSession.withBuddy)}
+              onChange={(next) =>
+                onUpdateActiveSession(
+                  setSessionBuddy(activeSession, next, exerciseMap)
+                )
+              }
+            />
             <div className="flex items-center justify-between text-xs">
               <span className="text-zinc-400">
                 Spinal Axial Load:{' '}
@@ -510,7 +551,7 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
 
             <div className="space-y-1.5">
               <div className="text-[11px] font-semibold text-zinc-400">
-                Pivot Entire Session On-the-Fly (e.g., partner spotter available):
+                Pivot entire session to a different split (keeps Buddy/Solo):
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {ALL_SPLITS.map((sp) => (
@@ -608,7 +649,10 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                 exercises={exercises}
                 value={activeSession.primaryLiftId}
                 sheetTitle="Swap primary lift"
-                suggestedIds={primaryLiftSuggestions(activeSession.splitType)}
+                suggestedIds={primaryLiftSuggestions(
+                  activeSession.splitType,
+                  Boolean(activeSession.withBuddy)
+                )}
                 suggestedLabel={`Recommended for ${SPLIT_SHORT_LABELS[activeSession.splitType]}`}
                 onChange={(id) => {
                   onUpdateActiveSession({

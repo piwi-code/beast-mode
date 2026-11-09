@@ -7,9 +7,20 @@ import {
   SupersetPair,
   WorkoutSession,
 } from '../models/types';
+import {
+  SPLIT_LABELS,
+  SPLIT_SHORT_LABELS,
+  getSafeExerciseId,
+  isBuddyDay,
+  isLowerSplit,
+} from './splits';
+
+export { SPLIT_LABELS, SPLIT_SHORT_LABELS } from './splits';
 
 export interface NextSessionSuggestion {
   splitType: SessionSplitType;
+  /** Buddy/spotter expected (from the plan's buddy days unless overridden). */
+  withBuddy: boolean;
   splitLabel: string;
   rationale: string;
   recommendedPrimaryLiftId: string;
@@ -19,72 +30,42 @@ export interface NextSessionSuggestion {
   turnaroundHoursSinceLast?: number;
 }
 
-export const SPLIT_LABELS: Record<SessionSplitType, string> = {
-  PPL_PUSH: 'PPL — Push (Chest / Delts / Triceps)',
-  PPL_PULL: 'PPL — Pull (Lats / Back / Biceps)',
-  PPL_LEGS: 'PPL — Legs (Quads / Posterior / Sled)',
-  BUDDY_UPPER: 'Buddy Upper (Partner Bench & Swap Flow)',
-  BUDDY_LOWER: 'Buddy Lower (Squat + Spine Decompression)',
-  SOLO_UPPER: 'Solo Upper (DB / Cable Hypertrophy)',
-  SOLO_LOWER: 'Solo Lower (Squat + Unilateral / Sled)',
-};
-
-export const SPLIT_SHORT_LABELS: Record<SessionSplitType, string> = {
-  PPL_PUSH: 'Push',
-  PPL_PULL: 'Pull',
-  PPL_LEGS: 'Legs',
-  BUDDY_UPPER: 'Buddy Upper',
-  BUDDY_LOWER: 'Buddy Lower',
-  SOLO_UPPER: 'Solo Upper',
-  SOLO_LOWER: 'Solo Lower',
-};
-
 export function getRotationForPlan(plan: PlanConfig): SessionSplitType[] {
   if (plan.scheduleFamily === 'PPL') {
     return ['PPL_PUSH', 'PPL_PULL', 'PPL_LEGS'];
   }
 
-  if (plan.upperLowerVariant === 'BUDDY_ONLY') {
-    return ['BUDDY_UPPER', 'BUDDY_LOWER'];
-  }
-  if (plan.upperLowerVariant === 'SOLO_ONLY') {
-    return ['SOLO_UPPER', 'SOLO_LOWER'];
-  }
-
-  return ['SOLO_UPPER', 'SOLO_LOWER', 'BUDDY_UPPER', 'BUDDY_LOWER'];
+  return ['UPPER', 'LOWER'];
 }
 
+/**
+ * Primary lift candidates for a split. Without a buddy, lifts that need a
+ * spotter (barbell bench) are dropped in favour of dumbbell/self-spotting
+ * alternatives.
+ */
 export function getPrimaryLiftCandidatesForSplit(
-  splitType: SessionSplitType
+  splitType: SessionSplitType,
+  withBuddy: boolean = true
 ): { recommended: string; alternatives: string[] } {
   switch (splitType) {
     case 'PPL_PUSH':
-      return {
-        recommended: 'bb_flat_bench',
-        alternatives: ['bb_ohp', 'db_flat_bench', 'db_incline_press'],
-      };
+    case 'UPPER':
+      return withBuddy
+        ? {
+            recommended: 'bb_flat_bench',
+            alternatives: ['bb_ohp', 'db_incline_press', 'db_flat_bench'],
+          }
+        : {
+            recommended: 'db_flat_bench',
+            alternatives: ['db_incline_press', 'bb_ohp'],
+          };
     case 'PPL_PULL':
       return {
         recommended: 'weighted_pullup',
         alternatives: ['bb_pendlay_row', 'lat_pulldown_neutral'],
       };
     case 'PPL_LEGS':
-      return {
-        recommended: 'bb_back_squat',
-        alternatives: ['bb_deadlift', 'bb_rdl'],
-      };
-    case 'BUDDY_UPPER':
-      return {
-        recommended: 'bb_flat_bench',
-        alternatives: ['bb_ohp', 'db_incline_press', 'db_flat_bench'],
-      };
-    case 'SOLO_UPPER':
-      return {
-        recommended: 'db_flat_bench',
-        alternatives: ['bb_flat_bench', 'bb_ohp', 'db_incline_press'],
-      };
-    case 'BUDDY_LOWER':
-    case 'SOLO_LOWER':
+    case 'LOWER':
       return {
         recommended: 'bb_back_squat',
         alternatives: ['bb_deadlift', 'bb_rdl'],
@@ -92,68 +73,96 @@ export function getPrimaryLiftCandidatesForSplit(
   }
 }
 
+/**
+ * Default superset order per split. Buddy sessions favour partner-friendly
+ * station swaps; solo sessions favour self-contained single-station pairs.
+ */
 export function getDefaultSupersetsForSplit(
   splitType: SessionSplitType,
-  count: 2 | 3 | 4
+  count: 2 | 3 | 4,
+  withBuddy: boolean = true
 ): string[] {
-  const map: Record<SessionSplitType, string[]> = {
-    BUDDY_UPPER: [
-      'ss_row_cable_fly',
-      'ss_shared_bench_arms',
-      'ss_incline_row_lateral_delt',
-      'ss_cable_delt_tricep',
-    ],
-    SOLO_UPPER: [
-      'ss_row_cable_fly',
-      'ss_cable_delt_tricep',
-      'ss_shared_bench_arms',
-      'ss_incline_row_lateral_delt',
-    ],
-    BUDDY_LOWER: [
-      'ss_hamstring_calf',
-      'ss_lat_core_decompression',
-      'ss_quad_core_reset',
-      'ss_lunges_hammer_curls',
-    ],
-    SOLO_LOWER: [
-      'ss_lunges_hammer_curls',
-      'ss_hamstring_calf',
-      'ss_lat_core_decompression',
-      'ss_quad_core_reset',
-    ],
-    PPL_PUSH: [
-      'ss_cable_delt_tricep',
-      'ss_row_cable_fly',
-      'ss_shared_bench_arms',
-      'ss_incline_row_lateral_delt',
-    ],
-    PPL_PULL: [
-      'ss_incline_row_lateral_delt',
-      'ss_lat_core_decompression',
-      'ss_shared_bench_arms',
-      'ss_row_cable_fly',
-    ],
-    PPL_LEGS: [
-      'ss_hamstring_calf',
-      'ss_lat_core_decompression',
-      'ss_lunges_hammer_curls',
-      'ss_quad_core_reset',
-    ],
+  const map: Record<SessionSplitType, { buddy: string[]; solo: string[] }> = {
+    UPPER: {
+      buddy: [
+        'ss_row_cable_fly',
+        'ss_shared_bench_arms',
+        'ss_incline_row_lateral_delt',
+        'ss_cable_delt_tricep',
+      ],
+      solo: [
+        'ss_row_cable_fly',
+        'ss_cable_delt_tricep',
+        'ss_shared_bench_arms',
+        'ss_incline_row_lateral_delt',
+      ],
+    },
+    LOWER: {
+      buddy: [
+        'ss_hamstring_calf',
+        'ss_lat_core_decompression',
+        'ss_quad_core_reset',
+        'ss_lunges_hammer_curls',
+      ],
+      solo: [
+        'ss_lunges_hammer_curls',
+        'ss_hamstring_calf',
+        'ss_lat_core_decompression',
+        'ss_quad_core_reset',
+      ],
+    },
+    PPL_PUSH: {
+      buddy: [
+        'ss_row_cable_fly',
+        'ss_cable_delt_tricep',
+        'ss_shared_bench_arms',
+        'ss_incline_row_lateral_delt',
+      ],
+      solo: [
+        'ss_cable_delt_tricep',
+        'ss_row_cable_fly',
+        'ss_shared_bench_arms',
+        'ss_incline_row_lateral_delt',
+      ],
+    },
+    PPL_PULL: {
+      buddy: [
+        'ss_incline_row_lateral_delt',
+        'ss_lat_core_decompression',
+        'ss_shared_bench_arms',
+        'ss_row_cable_fly',
+      ],
+      solo: [
+        'ss_incline_row_lateral_delt',
+        'ss_lat_core_decompression',
+        'ss_shared_bench_arms',
+        'ss_row_cable_fly',
+      ],
+    },
+    PPL_LEGS: {
+      buddy: [
+        'ss_hamstring_calf',
+        'ss_lat_core_decompression',
+        'ss_quad_core_reset',
+        'ss_lunges_hammer_curls',
+      ],
+      solo: [
+        'ss_hamstring_calf',
+        'ss_lunges_hammer_curls',
+        'ss_lat_core_decompression',
+        'ss_quad_core_reset',
+      ],
+    },
   };
 
-  return map[splitType].slice(0, count);
+  return map[splitType][withBuddy ? 'buddy' : 'solo'].slice(0, count);
 }
 
 export function getDefaultFinishersForSplit(
   splitType: SessionSplitType,
   count: 1 | 2
 ): string[] {
-  const isLower =
-    splitType === 'BUDDY_LOWER' ||
-    splitType === 'SOLO_LOWER' ||
-    splitType === 'PPL_LEGS';
-
-  if (isLower) {
+  if (isLowerSplit(splitType)) {
     return count === 1
       ? ['turf_sled_push_pull']
       : ['turf_sled_push_pull', 'farmers_carry_turf'];
@@ -166,8 +175,10 @@ export function getDefaultFinishersForSplit(
 export function suggestNextSession(
   plan: PlanConfig,
   priorSessions: WorkoutSession[],
-  referenceDate: Date = new Date()
+  referenceDate: Date = new Date(),
+  withBuddyOverride?: boolean
 ): NextSessionSuggestion {
+  const withBuddy = withBuddyOverride ?? isBuddyDay(plan, referenceDate);
   const rotation = getRotationForPlan(plan);
   const sorted = [...priorSessions].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -187,31 +198,20 @@ export function suggestNextSession(
       nextSplit = rotation[(lastIdx + 1) % rotation.length];
       rationale = `Following ${SPLIT_SHORT_LABELS[lastSession.splitType]} → next in sequence is ${SPLIT_SHORT_LABELS[nextSplit]}.`;
     } else {
-      const lastWasLower =
-        lastSession.splitType.includes('LOWER') ||
-        lastSession.splitType === 'PPL_LEGS';
+      const lastWasLower = isLowerSplit(lastSession.splitType);
       nextSplit = lastWasLower ? rotation[0] : rotation[1] || rotation[0];
       rationale = `Last session was ${SPLIT_SHORT_LABELS[lastSession.splitType]} → alternating to ${SPLIT_SHORT_LABELS[nextSplit]}.`;
     }
   }
 
-  const liftCandidates = getPrimaryLiftCandidatesForSplit(nextSplit);
+  const liftCandidates = getPrimaryLiftCandidatesForSplit(nextSplit, withBuddy);
   // Automatically flip-flop between Back Squat and Deadlift on consecutive Lower / Legs sessions
   // (Works seamlessly for both 2-session/wk week-to-week alternation and 4-session/wk Lower A / Lower B)
   let recommendedPrimaryLiftId = liftCandidates.recommended;
   let alternativePrimaryLiftIds = [...liftCandidates.alternatives];
 
-  if (
-    nextSplit === 'BUDDY_LOWER' ||
-    nextSplit === 'SOLO_LOWER' ||
-    nextSplit === 'PPL_LEGS'
-  ) {
-    const lastLower = sorted.find(
-      (s) =>
-        s.splitType === 'BUDDY_LOWER' ||
-        s.splitType === 'SOLO_LOWER' ||
-        s.splitType === 'PPL_LEGS'
-    );
+  if (isLowerSplit(nextSplit)) {
+    const lastLower = sorted.find((s) => isLowerSplit(s.splitType));
     if (lastLower?.primaryLiftId === 'bb_back_squat') {
       recommendedPrimaryLiftId = 'bb_deadlift';
       alternativePrimaryLiftIds = ['bb_back_squat', 'bb_rdl'];
@@ -226,9 +226,14 @@ export function suggestNextSession(
     }
   }
 
+  rationale += withBuddy
+    ? ' Buddy session: spotted barbell lifts enabled.'
+    : ' Solo session: spotter-free lifts selected.';
+
   const recommendedSupersetIds = getDefaultSupersetsForSplit(
     nextSplit,
-    plan.targetSupersetsPerSession
+    plan.targetSupersetsPerSession,
+    withBuddy
   );
   const recommendedFinisherIds = getDefaultFinishersForSplit(
     nextSplit,
@@ -237,6 +242,7 @@ export function suggestNextSession(
 
   return {
     splitType: nextSplit,
+    withBuddy,
     splitLabel: SPLIT_LABELS[nextSplit],
     rationale,
     recommendedPrimaryLiftId,
@@ -257,7 +263,15 @@ export function buildDraftSessionFromSuggestion(
   const exerciseMap = new Map(exercises.map((e) => [e.id, e]));
   const supersetMap = new Map(curatedSupersets.map((s) => [s.id, s]));
 
-  const primaryExercise = exerciseMap.get(suggestion.recommendedPrimaryLiftId);
+  // Never auto-select a lift that needs a spotter for a solo session.
+  const primaryLiftId = getSafeExerciseId(
+    suggestion.recommendedPrimaryLiftId,
+    exerciseMap,
+    suggestion.withBuddy
+  );
+  const safeId = (id: string) =>
+    getSafeExerciseId(id, exerciseMap, suggestion.withBuddy);
+  const primaryExercise = exerciseMap.get(primaryLiftId);
   const primarySetCount = primaryExercise?.defaultSets ?? 4;
 
   const defaultPrimaryWeight =
@@ -288,8 +302,8 @@ export function buildDraftSessionFromSuggestion(
       id: `ss_block_${Date.now()}_${Math.random().toString(36).slice(2, 6)}_${index}`,
       supersetPairId: pair.id,
       customName: pair.name,
-      exerciseAId: pair.exerciseAId,
-      exerciseBId: pair.exerciseBId,
+      exerciseAId: safeId(pair.exerciseAId),
+      exerciseBId: safeId(pair.exerciseBId),
       executionMode: 'PAIRED',
       targetSets,
       setsA: Array.from({ length: targetSets }, (_, idx) => ({
@@ -327,7 +341,8 @@ export function buildDraftSessionFromSuggestion(
     id: `session_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     date: dateIso,
     splitType: suggestion.splitType,
-    primaryLiftId: suggestion.recommendedPrimaryLiftId,
+    withBuddy: suggestion.withBuddy,
+    primaryLiftId,
     primaryLiftSets,
     supersets,
     finishers,

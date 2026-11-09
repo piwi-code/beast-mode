@@ -9,7 +9,8 @@ A local-first Progressive Web Application (PWA) for planning modular gym session
 ## Key Features
 
 - **Flexible Schedule & Split Sequencer**:
-  - Choose between **Push / Pull / Legs (PPL)** or **Upper / Lower** (Solo, Buddy Partner-Optimized, or 4-Day Hybrid Solo + Buddy) across **2, 3, or 4 sessions per week**.
+  - Choose between **Push / Pull / Legs (PPL)** or **Upper / Lower** across **2, 3, or 4 sessions per week**.
+  - **Buddy vs. Solo per session**: mark your usual buddy (spotter) weekdays in Settings and tick Buddy on/off for any session. Solo sessions automatically swap spotter-dependent lifts (e.g. Barbell Bench → Dumbbell Bench) and warn if you pick one anyway.
   - Automatically suggests the next logical session in your rotation and recommends the primary anchor lift (plus alternative main lifts).
 - **Modular Supersets with On-the-Fly Splitting**:
   - Add **2, 3, or 4 supersets** and **1 or 2 finishers** (including the standardized **Turf Sled Forward Push + Backward Drag protocol**).
@@ -17,7 +18,7 @@ A local-first Progressive Web Application (PWA) for planning modular gym session
 - **4-Tier Safeguard & Recommendation Engine**:
   1. **Axial Load Ceiling**: Alerts when cumulative spinal compression exceeds `4` in a single session.
   2. **Antagonist / Non-Competing Mandate**: Flags intra-session muscle stacking (e.g., Flat Bench + Incline DB Press) and grip-tax clashes.
-  3. **Rolling 48-Hour Recovery Lookback**: Warns when a muscle group exceeds `6` working sets within 48 hours (e.g. Solo Upper $\rightarrow$ Lower $\rightarrow$ Buddy Upper) and recommends joint-friendly/lengthened alternatives.
+  3. **Rolling 48-Hour Recovery Lookback**: Warns when a muscle group exceeds `6` working sets within 48 hours (e.g. Upper $\rightarrow$ Lower $\rightarrow$ Upper) and recommends joint-friendly/lengthened alternatives.
   4. **7-Day & 14-Day Muscle Volume Balance**: Tracks working sets across weekly and fortnightly windows so supersets are allocated evenly without overtraining.
 - **Touch-Friendly Exercise Picker**:
   - Search by name, muscle or equipment, filter by equipment, and browse by muscle-group sub-headings (supersets appear under both muscle groups). Every option shows a plain-language name, a one-line description, and labels such as equipment, main lift, and spine load.

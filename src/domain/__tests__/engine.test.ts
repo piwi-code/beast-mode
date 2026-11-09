@@ -18,14 +18,15 @@ import { estimateOneRepMax } from '../engine/oneRepMax';
 import { WorkoutSession } from '../models/types';
 
 describe('Beast Mode Domain Engine', () => {
-  it('defaults to Buddy 4-Session Upper/Lower and suggests Buddy Lower after Buddy Upper', () => {
-    expect(DEFAULT_PLAN_CONFIG.upperLowerVariant).toBe('BUDDY_ONLY');
+  it('defaults to a 4-session Upper/Lower plan with no buddy days and suggests Lower after Upper', () => {
+    expect(DEFAULT_PLAN_CONFIG.scheduleFamily).toBe('UPPER_LOWER');
+    expect(DEFAULT_PLAN_CONFIG.buddyDays).toEqual([]);
     expect(DEFAULT_PLAN_CONFIG.sessionsPerWeek).toBe(4);
 
     const prevSession: WorkoutSession = {
       id: 's1',
       date: new Date(Date.now() - 36 * 3600 * 1000).toISOString(),
-      splitType: 'BUDDY_UPPER',
+      splitType: 'UPPER',
       primaryLiftId: 'bb_flat_bench',
       primaryLiftSets: [],
       supersets: [],
@@ -35,11 +36,11 @@ describe('Beast Mode Domain Engine', () => {
     };
 
     const suggestion = suggestNextSession(DEFAULT_PLAN_CONFIG, [prevSession]);
-    expect(suggestion.splitType).toBe('BUDDY_LOWER');
+    expect(suggestion.splitType).toBe('LOWER');
     expect(suggestion.recommendedPrimaryLiftId).toBe('bb_back_squat');
   });
 
-  it('flip-flops Lower primary anchor between Back Squat and Deadlift across consecutive Lower sessions (including 2-day Buddy split)', () => {
+  it('flip-flops Lower primary anchor between Back Squat and Deadlift across consecutive Lower sessions (including 2-day split)', () => {
     const buddy2DayPlan = {
       ...DEFAULT_PLAN_CONFIG,
       sessionsPerWeek: 2 as const,
@@ -48,7 +49,7 @@ describe('Beast Mode Domain Engine', () => {
     const lower1Squat: WorkoutSession = {
       id: 'l1',
       date: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(),
-      splitType: 'BUDDY_LOWER',
+      splitType: 'LOWER',
       primaryLiftId: 'bb_back_squat',
       primaryLiftSets: [],
       supersets: [],
@@ -59,7 +60,7 @@ describe('Beast Mode Domain Engine', () => {
     const upper1Bench: WorkoutSession = {
       id: 'u1',
       date: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
-      splitType: 'BUDDY_UPPER',
+      splitType: 'UPPER',
       primaryLiftId: 'bb_flat_bench',
       primaryLiftSets: [],
       supersets: [],
@@ -68,12 +69,12 @@ describe('Beast Mode Domain Engine', () => {
       status: 'COMPLETED',
     };
 
-    // Next session is BUDDY_LOWER -> should flip-flop from Squat to Deadlift
+    // Next session is LOWER -> should flip-flop from Squat to Deadlift
     const nextLowerDeadlift = suggestNextSession(buddy2DayPlan, [
       lower1Squat,
       upper1Bench,
     ]);
-    expect(nextLowerDeadlift.splitType).toBe('BUDDY_LOWER');
+    expect(nextLowerDeadlift.splitType).toBe('LOWER');
     expect(nextLowerDeadlift.recommendedPrimaryLiftId).toBe('bb_deadlift');
 
     // And the Lower session after that should flip back to Squat
@@ -94,7 +95,7 @@ describe('Beast Mode Domain Engine', () => {
       lower2Deadlift,
       upper2Bench,
     ]);
-    expect(nextLowerSquat.splitType).toBe('BUDDY_LOWER');
+    expect(nextLowerSquat.splitType).toBe('LOWER');
     expect(nextLowerSquat.recommendedPrimaryLiftId).toBe('bb_back_squat');
   });
 
@@ -128,7 +129,7 @@ describe('Beast Mode Domain Engine', () => {
     const draft = buildDraftSessionFromSuggestion(
       {
         ...suggestion,
-        splitType: 'BUDDY_LOWER',
+        splitType: 'LOWER',
         recommendedPrimaryLiftId: 'bb_back_squat',
       },
       SEED_EXERCISES,
@@ -158,7 +159,7 @@ describe('Beast Mode Domain Engine', () => {
     const draft = buildDraftSessionFromSuggestion(
       {
         ...suggestion,
-        splitType: 'BUDDY_LOWER',
+        splitType: 'LOWER',
         recommendedPrimaryLiftId: 'bb_back_squat',
       },
       SEED_EXERCISES,
@@ -183,7 +184,8 @@ describe('Beast Mode Domain Engine', () => {
     const draft = buildDraftSessionFromSuggestion(
       {
         ...suggestion,
-        splitType: 'BUDDY_UPPER',
+        splitType: 'UPPER',
+        withBuddy: true,
         recommendedPrimaryLiftId: 'bb_flat_bench',
       },
       SEED_EXERCISES,

@@ -95,11 +95,16 @@ export const App: React.FC = () => {
     setActivePage('CURRENT');
   };
 
-  const handleStartRecommendedSession = async () => {
+  const handleStartRecommendedSession = async (withBuddy?: boolean) => {
     if (activeSession) {
       await repo.saveSession({ ...activeSession, status: 'PLANNED' });
     }
-    const suggestion = suggestNextSession(plan, completedSessions);
+    const suggestion = suggestNextSession(
+      plan,
+      completedSessions,
+      new Date(),
+      withBuddy
+    );
     const activeDraft = buildDraftSessionFromSuggestion(
       suggestion,
       exercises,

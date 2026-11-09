@@ -69,6 +69,20 @@ describe('picker search & filter', () => {
     for (const o of cable) expect(exMap.get(o.id)!.equipment).toBe('CABLE');
   });
 
+  it('filters by several equipment keys at once (any match)', () => {
+    const both = filterOptionsByKey(exerciseOptions, ['CABLE', 'MACHINE']);
+    expect(both.length).toBe(
+      filterOptionsByKey(exerciseOptions, 'CABLE').length +
+        filterOptionsByKey(exerciseOptions, 'MACHINE').length
+    );
+    expect(filterOptionsByKey(exerciseOptions, [])).toHaveLength(exerciseOptions.length);
+  });
+
+  it('labels spotter-dependent lifts', () => {
+    const bench = exerciseOptions.find((o) => o.id === 'bb_flat_bench')!;
+    expect(bench.tags.map((t) => t.label)).toContain('Needs spotter');
+  });
+
   it('suggests split-appropriate primary lifts and finishers', () => {
     expect(getPrimaryLiftSuggestionIds('PPL_LEGS')[0]).toBe('bb_back_squat');
     expect(getFinisherSuggestionIds(SEED_EXERCISES)).toContain('farmers_carry_turf');

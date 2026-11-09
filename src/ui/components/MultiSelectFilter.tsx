@@ -18,6 +18,8 @@ export interface MultiSelectFilterProps {
   options: MultiSelectFilterOption[];
   selected: string[];
   onChange: (next: string[]) => void;
+  /** Notified when the filter sheet opens/closes (e.g. so a parent sheet can pause its own key handling). */
+  onOpenChange?: (open: boolean) => void;
   className?: string;
 }
 
@@ -32,9 +34,14 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
   options,
   selected,
   onChange,
+  onOpenChange,
   className = '',
 }) => {
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(false);
+  const setOpen = (next: boolean) => {
+    setOpenState(next);
+    onOpenChange?.(next);
+  };
   const active = selected.length > 0;
 
   const toggle = (id: string) =>

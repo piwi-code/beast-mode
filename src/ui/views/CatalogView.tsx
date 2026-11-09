@@ -213,7 +213,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                         </span>
                         {ss.buddyFriendly && (
                           <span className="rounded bg-zinc-800 px-2 py-0.5 text-[10px] text-emerald-400 font-semibold">
-                            Buddy Swap
+                            Buddy friendly
                           </span>
                         )}
                       </div>

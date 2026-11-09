@@ -10,6 +10,8 @@ import {
   Play,
   Plus,
   ShieldAlert,
+  UserX,
+  Users,
   Sparkles,
   Split,
   Trash2,
@@ -47,6 +49,8 @@ import {
 } from '../../domain/catalog/pickerOptions';
 import { ExercisePicker, SupersetPicker } from '../components/ExercisePicker';
 import { ScrollCarousel } from '../components/ScrollCarousel';
+import { BuddyBadge, BuddyToggle } from '../components/BuddyToggle';
+import { isBuddyDay, setSessionBuddy } from '../../domain/engine/splits';
 
 interface PlanViewProps {
   plan: PlanConfig;
@@ -148,18 +152,22 @@ export const PlanView: React.FC<PlanViewProps> = ({
         s.id !== session.id &&
         new Date(s.date).getTime() < new Date(session.date).getTime()
     );
+    const withBuddy = Boolean(session.withBuddy);
     const baseSuggestion = suggestNextSession(
       plan,
       priorAll,
-      new Date(session.date)
+      new Date(session.date),
+      withBuddy
     );
     const rebuilt = buildDraftSessionFromSuggestion(
       {
         ...baseSuggestion,
         splitType: newSplit,
         splitLabel: SPLIT_LABELS[newSplit],
-        recommendedPrimaryLiftId:
-          getPrimaryLiftCandidatesForSplit(newSplit).recommended,
+        recommendedPrimaryLiftId: getPrimaryLiftCandidatesForSplit(
+          newSplit,
+          withBuddy
+        ).recommended,
       },
       exercises,
       curatedSupersets,
@@ -212,6 +220,10 @@ export const PlanView: React.FC<PlanViewProps> = ({
       INTRA_SESSION_OVERWORK: {
         badge: 'border-red-500/60 bg-red-950/50 text-red-200',
         icon: <ShieldAlert className="h-3.5 w-3.5 text-red-400 shrink-0" />,
+      },
+      NEEDS_SPOTTER: {
+        badge: 'border-red-500/60 bg-red-950/50 text-red-200',
+        icon: <UserX className="h-3.5 w-3.5 text-red-400 shrink-0" />,
       },
     };
 
@@ -309,6 +321,12 @@ export const PlanView: React.FC<PlanViewProps> = ({
                   >
                     {day.toLocaleDateString(undefined, { weekday: 'short' })}
                   </span>
+                  {isBuddyDay(plan, day) && (
+                    <Users
+                      className="h-3 w-3 text-emerald-400/70"
+                      aria-label="Buddy day"
+                    />
+                  )}
                   <span className="font-extrabold text-zinc-200">
                     {day.getDate()}
                   </span>
@@ -332,9 +350,11 @@ export const PlanView: React.FC<PlanViewProps> = ({
                           expandedSessionId === p.id ? null : p.id
                         )
                       }
-                      className="w-full text-left rounded-md bg-emerald-500/20 border border-emerald-500/40 px-1.5 py-1 text-[10px] font-extrabold text-emerald-300 truncate"
+                      className="flex w-full items-center gap-1 text-left rounded-md bg-emerald-500/20 border border-emerald-500/40 px-1.5 py-1 text-[10px] font-extrabold text-emerald-300"
+                      title={p.withBuddy ? 'Buddy session' : 'Solo session'}
                     >
-                      {SPLIT_SHORT_LABELS[p.splitType]}
+                      <span className="truncate">{SPLIT_SHORT_LABELS[p.splitType]}</span>
+                      <BuddyBadge withBuddy={p.withBuddy} />
                     </button>
                   ))}
                 </div>
@@ -436,9 +456,9 @@ export const PlanView: React.FC<PlanViewProps> = ({
               );
             });
 
-            const hasRed = allSlotEvaluations.includes(
-              'INTRA_SESSION_OVERWORK'
-            );
+            const hasRed =
+              allSlotEvaluations.includes('INTRA_SESSION_OVERWORK') ||
+              allSlotEvaluations.includes('NEEDS_SPOTTER');
             const hasOrange = allSlotEvaluations.includes('PROJECTED_OVERWORK');
             const hasBlue = allSlotEvaluations.includes('WRONG_STYLE');
 
@@ -496,6 +516,16 @@ export const PlanView: React.FC<PlanViewProps> = ({
                           />
                           <span className="text-base font-extrabold text-white truncate">
                             {SPLIT_SHORT_LABELS[session.splitType]}
+                          </span>
+                          <span
+                            className="shrink-0 text-zinc-400"
+                            title={session.withBuddy ? 'Buddy session' : 'Solo session'}
+                          >
+                            <BuddyBadge
+                              withBuddy={session.withBuddy}
+                              showSolo
+                              className="h-4 w-4"
+                            />
                           </span>
                         </div>
                         <div className="text-xs text-zinc-400 truncate mt-0.5">
@@ -605,6 +635,14 @@ export const PlanView: React.FC<PlanViewProps> = ({
                       />
                     </div>
 
+                    <BuddyToggle
+                      className="w-full sm:w-auto"
+                      checked={Boolean(session.withBuddy)}
+                      onChange={(next) =>
+                        onSaveSession(setSessionBuddy(session, next, exerciseMap))
+                      }
+                    />
+
                     {/* 1. PRIMARY ANCHOR LIFT */}
                     <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3.5 space-y-2">
                       <div className="text-xs font-bold uppercase tracking-wider text-emerald-400">
@@ -614,7 +652,10 @@ export const PlanView: React.FC<PlanViewProps> = ({
                         exercises={exercises}
                         value={session.primaryLiftId}
                         sheetTitle="Choose primary lift"
-                        suggestedIds={getPrimaryLiftSuggestionIds(session.splitType)}
+                        suggestedIds={getPrimaryLiftSuggestionIds(
+                          session.splitType,
+                          Boolean(session.withBuddy)
+                        )}
                         suggestedLabel={`Recommended for ${SPLIT_SHORT_LABELS[session.splitType]}`}
                         onChange={(id) =>
                           onSaveSession({

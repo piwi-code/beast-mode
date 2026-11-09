@@ -6,6 +6,7 @@ import {
   Settings,
   Sliders,
   Upload,
+  Users,
 } from 'lucide-react';
 import {
   EquipmentCategory,
@@ -13,8 +14,12 @@ import {
   PlanConfig,
   PlanScheduleFamily,
   SessionsPerWeek,
-  UpperLowerVariant,
+  Weekday,
 } from '../../domain/models/types';
+import {
+  WEEKDAYS_MON_FIRST,
+  WEEKDAY_SHORT_LABELS,
+} from '../../domain/engine/splits';
 import { AppDataSnapshot } from '../../data/interfaces/repositories';
 
 interface SettingsViewProps {
@@ -43,44 +48,41 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const buildPlanName = (
     family: PlanScheduleFamily,
-    variant: UpperLowerVariant,
     sessionsPerWeek: SessionsPerWeek
-  ) => {
-    if (family === 'PPL') {
-      return `Push / Pull / Legs (${sessionsPerWeek}-Session Rolling Split)`;
-    }
-    const vName =
-      variant === 'BUDDY_ONLY'
-        ? 'Buddy Upper / Lower'
-        : variant === 'SOLO_ONLY'
-        ? 'Solo Upper / Lower'
-        : 'Hybrid Solo + Buddy Upper / Lower';
-    return `${vName} (${sessionsPerWeek}-Session Split)`;
-  };
+  ) =>
+    family === 'PPL'
+      ? `Push / Pull / Legs (${sessionsPerWeek}-Session Rolling Split)`
+      : `Upper / Lower (${sessionsPerWeek}-Session Split)`;
 
   const handleFamilyChange = async (family: PlanScheduleFamily) => {
     await onSavePlan({
       ...plan,
       scheduleFamily: family,
-      name: buildPlanName(family, plan.upperLowerVariant, plan.sessionsPerWeek),
+      name: buildPlanName(family, plan.sessionsPerWeek),
     });
     setStatusMessage(`Updated primary plan to ${family}`);
   };
 
-  const handleVariantChange = async (variant: UpperLowerVariant) => {
-    await onSavePlan({
-      ...plan,
-      upperLowerVariant: variant,
-      name: buildPlanName(plan.scheduleFamily, variant, plan.sessionsPerWeek),
-    });
-    setStatusMessage(`Updated Upper/Lower station mode to ${variant}`);
+  const buddyDays = plan.buddyDays ?? [];
+  const handleToggleBuddyDay = async (day: Weekday) => {
+    const next = buddyDays.includes(day)
+      ? buddyDays.filter((d) => d !== day)
+      : [...buddyDays, day].sort();
+    await onSavePlan({ ...plan, buddyDays: next });
+    setStatusMessage(
+      next.length
+        ? `Buddy days: ${WEEKDAYS_MON_FIRST.filter((d) => next.includes(d))
+            .map((d) => WEEKDAY_SHORT_LABELS[d])
+            .join(', ')}`
+        : 'No buddy days — sessions default to solo (spotter-free lifts)'
+    );
   };
 
   const handleSessionsPerWeekChange = async (count: SessionsPerWeek) => {
     await onSavePlan({
       ...plan,
       sessionsPerWeek: count,
-      name: buildPlanName(plan.scheduleFamily, plan.upperLowerVariant, count),
+      name: buildPlanName(plan.scheduleFamily, count),
     });
     setStatusMessage(`Updated weekly session target to ${count} sessions/week`);
   };
@@ -176,7 +178,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               }`}
             >
               <div className="text-sm font-bold text-white">
-                Upper / Lower Split (Default: Buddy 4-Session)
+                Upper / Lower Split
               </div>
               <p className="text-xs text-zinc-400 mt-1">
                 Alternates Upper and Lower days. 4 sessions/week = Upper/Lower twice weekly.
@@ -201,46 +203,43 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
 
-        {/* Upper/Lower Sub-Variant */}
-        {plan.scheduleFamily === 'UPPER_LOWER' && (
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-              Upper / Lower Station Mode
-            </label>
-            <div className="grid gap-2.5 sm:grid-cols-3">
-              {[
-                {
-                  id: 'BUDDY_ONLY' as const,
-                  title: 'Buddy Partner Flow (Active)',
-                  desc: 'Partner station swaps, shared bench spotter & You-Go-I-Go sleds',
-                },
-                {
-                  id: 'HYBRID_SOLO_BUDDY' as const,
-                  title: 'Hybrid Solo + Buddy',
-                  desc: 'Solo Upper/Lower early week → Buddy Upper/Lower (36–48h turnaround)',
-                },
-                {
-                  id: 'SOLO_ONLY' as const,
-                  title: 'Solo Gym Flow',
-                  desc: 'DB/Cable self-contained footprints',
-                },
-              ].map((v) => (
+        {/* Buddy availability (applies to every split) */}
+        <div className="space-y-2">
+          <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            <Users className="h-3.5 w-3.5" /> Buddy Days (Spotter Available)
+          </label>
+          <p className="text-xs text-zinc-400">
+            New sessions on these days start as <strong className="text-zinc-200">Buddy</strong>{' '}
+            sessions (spotted barbell bench, partner station swaps). Other days start as{' '}
+            <strong className="text-zinc-200">Solo</strong> with safer, spotter-free lifts. You can
+            still tick Buddy on or off for any individual session.
+          </p>
+          <div className="grid grid-cols-7 gap-1.5">
+            {WEEKDAYS_MON_FIRST.map((d) => {
+              const on = buddyDays.includes(d);
+              return (
                 <button
-                  key={v.id}
-                  onClick={() => handleVariantChange(v.id)}
-                  className={`rounded-xl border p-3 text-left transition ${
-                    plan.upperLowerVariant === v.id
-                      ? 'border-emerald-500 bg-emerald-500/15 text-white'
-                      : 'border-zinc-800 bg-zinc-950 text-zinc-400'
+                  key={d}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => handleToggleBuddyDay(d)}
+                  className={`flex h-14 flex-col items-center justify-center gap-0.5 rounded-xl border text-xs font-bold transition ${
+                    on
+                      ? 'border-emerald-500 bg-emerald-500/15 text-emerald-200'
+                      : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700'
                   }`}
                 >
-                  <div className="text-xs font-bold text-white">{v.title}</div>
-                  <div className="text-[11px] text-zinc-400 mt-0.5">{v.desc}</div>
+                  {WEEKDAY_SHORT_LABELS[d]}
+                  {on ? (
+                    <Users className="h-3.5 w-3.5" />
+                  ) : (
+                    <span className="text-[10px] font-semibold text-zinc-600">Solo</span>
+                  )}
                 </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
-        )}
+        </div>
 
         {/* Weekly Session Count */}
         <div className="space-y-2">

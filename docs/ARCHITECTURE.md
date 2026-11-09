@@ -21,6 +21,7 @@ beast-mode/
 │   │   ├── models/          # Entities: Exercise, SupersetPair, WorkoutSession, LiftSet, PlanConfig
 │   │   ├── engine/          # Pure business logic:
 │   │   │   ├── sequencer.ts         # Next session & primary lift recommendation engine
+│   │   │   ├── splits.ts            # Split labels, buddy-day & spotter-safety helpers, legacy data migration
 │   │   │   ├── rulesEngine.ts       # Axial load, antagonist pairing, intra-session overlap, 48h lookback
 │   │   │   ├── volumeTracker.ts     # 7-day & 14-day muscle volume balance & superset recommender
 │   │   │   └── oneRepMax.ts         # Epley/Brzycki 1RM & main lift progression calculators
@@ -38,13 +39,14 @@ beast-mode/
 │       │   ├── ExercisePicker.tsx       # ExercisePicker & SupersetPicker built on SelectSheet
 │       │   ├── MultiSelectFilter.tsx    # STANDARD multi-select filter (pill trigger + checkbox sheet); use instead of chip rows
 │       │   ├── BottomSheet.tsx          # Shared sheet chrome used by SelectSheet & MultiSelectFilter
+│       │   ├── BuddyToggle.tsx          # Per-session Buddy/Solo switch + small buddy badge
 │       │   └── ScrollCarousel.tsx       # STANDARD horizontal strip: swipe + snap, hidden scrollbar, edge arrows
 │       ├── views/           # 5 Core Pages:
 │       │   ├── PlanView.tsx             # 14-day calendar, lightweight session planning, 4-color health & Quick Switch, Current vs Future loading
 │       │   ├── CurrentSessionView.tsx   # Active gym floor session tracker (weights, reps, 2/3 set toggles, pivot split, complete/abandon)
 │       │   ├── HistoryView.tsx          # Bench/Squat/Deadlift progress charts, 28-day calendar & session inspector with editable notes
 │       │   ├── CatalogView.tsx          # Searchable superset & exercise directory with execution directions & form cues
-│       │   └── SettingsView.tsx         # Primary plan config (Buddy 4-Day default), volume ceilings, equipment weightings & JSON backup
+│       │   └── SettingsView.tsx         # Plan config (split, buddy days, sessions/week), volume ceilings, equipment weightings & JSON backup
 │       └── App.tsx
 ```
 
@@ -55,7 +57,7 @@ beast-mode/
 ### Repository Contract (`src/data/interfaces/repositories.ts`)
 All data operations are asynchronous (`Promise<T>`) even when backed by local IndexedDB:
 - `IExerciseRepository`: Query seed and custom exercises, curated supersets, and finisher templates.
-- `IPlanRepository`: Read and update the active training schedule (`PPL` vs `UPPER_LOWER`, `2 | 3 | 4` days/week, `SOLO | BUDDY | HYBRID`).
+- `IPlanRepository`: Read and update the active training schedule (`PPL` vs `UPPER_LOWER`, `2 | 3 | 4` days/week, buddy weekdays).
 - `ISessionRepository`: Save, update, list, and query `WorkoutSession` logs across arbitrary date windows (48h, 7d, 14d, all-time) and export/import full JSON snapshots.
 
 ### Migration Options When Moving Beyond Local-Only

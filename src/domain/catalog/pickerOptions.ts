@@ -176,6 +176,7 @@ export function buildExerciseOption(ex: Exercise): PickerOption {
   const spine = spineLoadTag(ex.axialLoadScore);
   if (spine) tags.push(spine);
   if (ex.gripTax >= 2) tags.push({ label: 'Grip heavy', tone: 'info' });
+  if (ex.needsSpotter) tags.push({ label: 'Needs spotter', tone: 'warn' });
 
   const region = getExerciseRegion(ex);
   const sr = setsRepsLine(ex);
@@ -191,6 +192,7 @@ export function buildExerciseOption(ex: Exercise): PickerOption {
     ...ex.secondaryMuscles.map((m) => SIMPLE_MUSCLE_LABELS[m]),
     ex.isPrimaryAnchorCandidate ? 'main lift anchor' : '',
     ex.isFinisherCandidate ? 'finisher' : '',
+    ex.needsSpotter ? 'spotter buddy' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -305,20 +307,28 @@ export function searchOptions(
     .map((s) => s.option);
 }
 
+/** Keeps options matching ANY of the given keys; empty/null means no filter. */
 export function filterOptionsByKey(
   options: PickerOption[],
-  filterId: string | null
+  filterIds: string | string[] | null
 ): PickerOption[] {
-  if (!filterId) return options;
-  return options.filter((o) => o.filterKeys.includes(filterId));
+  const ids = filterIds == null ? [] : Array.isArray(filterIds) ? filterIds : [filterIds];
+  if (ids.length === 0) return options;
+  return options.filter((o) => o.filterKeys.some((k) => ids.includes(k)));
 }
 
 // ---------------------------------------------------------------------------
 // Suggestions (pinned "Recommended" section)
 // ---------------------------------------------------------------------------
 
-export function getPrimaryLiftSuggestionIds(split: SessionSplitType): string[] {
-  const { recommended, alternatives } = getPrimaryLiftCandidatesForSplit(split);
+export function getPrimaryLiftSuggestionIds(
+  split: SessionSplitType,
+  withBuddy: boolean = true
+): string[] {
+  const { recommended, alternatives } = getPrimaryLiftCandidatesForSplit(
+    split,
+    withBuddy
+  );
   return [recommended, ...alternatives.filter((id) => id !== recommended)];
 }
 

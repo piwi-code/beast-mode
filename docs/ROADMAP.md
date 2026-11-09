@@ -13,7 +13,7 @@ When the POC phase ends: enable branch protection on `main` (require PR + passin
 - [x] Define domain specification and rules engine (`docs/WORKOUT_LOGIC.md`)
 - [x] Define layered architecture and migration strategy (`docs/ARCHITECTURE.md`)
 - [x] Implement pure TypeScript domain models (`src/domain/models/`)
-- [x] Build comprehensive seed catalog (`src/domain/seed/`) covering PPL, Buddy Upper/Lower, and Hybrid Solo/Buddy splits
+- [x] Build comprehensive seed catalog (`src/domain/seed/`) covering PPL and Upper/Lower splits
 - [x] Implement pure Domain Engine (`src/domain/engine/`):
   - [x] Next-Session & Primary Lift Sequencer (supports 2, 3, or 4 days/week for PPL & Upper/Lower)
   - [x] Rule 1: Axial Load Ceiling (`> 4` spinal compression warning)
@@ -25,7 +25,7 @@ When the POC phase ends: enable branch protection on `main` (require PR + passin
   - [x] Repository interfaces (`IExerciseRepository`, `IPlanRepository`, `ISessionRepository`)
   - [x] Dexie.js (IndexedDB) local persistence + JSON export/import for sharing & backups
 - [x] Build Mobile-First PWA UI (`src/ui/`):
-  - [x] Plan & Schedule Configurator (PPL vs Upper/Lower, 2/3/4 sessions/week, Solo/Buddy/Hybrid)
+  - [x] Plan & Schedule Configurator (PPL vs Upper/Lower, 2/3/4 sessions/week, buddy days)
   - [x] Smart Session Builder with 2–4 Supersets, 1–2 Finishers, and **1-tap Split-to-Single-Exercise toggle** for busy gym floors
   - [x] Live Set/Rep/Weight/RPE Logger + Sled Dosing Protocol card
   - [x] Main Lift Progression Dashboard (Squat, Bench, RDL/Deadlift, OHP, Pull-ups)
@@ -37,6 +37,8 @@ When the POC phase ends: enable branch protection on `main` (require PR + passin
 ## Phase 2: Polish & Gym-Floor Ergonomics
 - [x] Standard searchable picker (`SelectSheet`) replacing native dropdowns: muscle-group sub-headings, equipment filter chips, plain-language names, one-line descriptions & labels (equipment, main lift, spine load, grip, pairing type)
 - [x] Swipe carousel for the 14-day planner (no scrollbar, edge arrows) & multi-select Muscle/Equipment filters in the Catalog
+- [x] Per-session Buddy/Solo (spotter) toggle with weekday defaults; spotter-safe auto-selection & "Needs a Spotter" warnings (replaces Buddy/Solo/Hybrid split types)
+- [x] Equipment filter inside the exercise picker is a multi-select dropdown
 - [ ] Built-in auto-starting rest timer (60–90s for supersets/sleds, 2–3m for heavy primary anchors) with Web Audio/Vibration alerts
 - [ ] Shareable Workout Template URLs (encode a planned session into a URL query string so you can text a link to your gym buddy)
 - [ ] Custom Exercise & Custom Superset creator in the UI

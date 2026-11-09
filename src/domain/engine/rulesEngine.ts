@@ -9,6 +9,12 @@ import {
   SupersetPair,
   WorkoutSession,
 } from '../models/types';
+import {
+  SPLIT_SHORT_LABELS,
+  isLowerSplit,
+  isUpperSplit,
+  needsSpotterWithoutBuddy,
+} from './splits';
 
 export const ALL_MUSCLE_GROUPS: MuscleGroup[] = [
   'CHEST',
@@ -74,11 +80,7 @@ export function isExerciseStyleAlignedWithSplit(
     return true;
   }
 
-  const isLowerSplit =
-    splitType === 'BUDDY_LOWER' ||
-    splitType === 'SOLO_LOWER' ||
-    splitType === 'PPL_LEGS';
-  if (isLowerSplit) {
+  if (isLowerSplit(splitType)) {
     if (exercise.primaryMuscles.some((m) => LOWER_MUSCLES.includes(m))) {
       return true;
     }
@@ -92,7 +94,7 @@ export function isExerciseStyleAlignedWithSplit(
     return false;
   }
 
-  if (splitType === 'BUDDY_UPPER' || splitType === 'SOLO_UPPER') {
+  if (isUpperSplit(splitType)) {
     return exercise.primaryMuscles.some(
       (m) => PUSH_MUSCLES.includes(m) || PULL_MUSCLES.includes(m)
     );
@@ -307,9 +309,22 @@ export function evaluateExerciseSlot(params: {
     };
   }
 
+  const spotterReasons: string[] = [];
   const redReasons: string[] = [];
   const orangeReasons: string[] = [];
   const blueReasons: string[] = [];
+
+  // 0. Safety: spotter-dependent lift on a session without a buddy
+  if (needsSpotterWithoutBuddy(ex, session)) {
+    const alt = ex.soloAlternativeId
+      ? exerciseMap.get(ex.soloAlternativeId)
+      : undefined;
+    spotterReasons.push(
+      `${ex.name} should be done with a spotter, but this session has no buddy.${
+        alt ? ` Swap to ${alt.shortName ?? alt.name}, or tick "Buddy" if someone is spotting you.` : ' Tick "Buddy" if someone is spotting you.'
+      }`
+    );
+  }
 
   // 1. Check Intra-Session Red Errors
   const totalAxial = calculateSessionAxialLoad(session, exerciseMap);
@@ -424,10 +439,9 @@ export function evaluateExerciseSlot(params: {
     blueReasons.push(
       `${ex.name} targets ${ex.primaryMuscles
         .map((m) => MUSCLE_LABELS[m])
-        .join(', ')}, which is outside the typical ${session.splitType.replace(
-        '_',
-        ' '
-      )} focus.`
+        .join(', ')}, which is outside the typical ${
+        SPLIT_SHORT_LABELS[session.splitType]
+      } focus.`
     );
   }
 
@@ -435,7 +449,11 @@ export function evaluateExerciseSlot(params: {
   let headline = 'Optimal Fit';
   let reasons: string[] = [];
 
-  if (redReasons.length > 0) {
+  if (spotterReasons.length > 0) {
+    health = 'NEEDS_SPOTTER';
+    headline = 'Needs a Spotter';
+    reasons = [...spotterReasons, ...redReasons];
+  } else if (redReasons.length > 0) {
     health = 'INTRA_SESSION_OVERWORK';
     headline = 'Intra-Session Conflict';
     reasons = redReasons;
@@ -450,7 +468,9 @@ export function evaluateExerciseSlot(params: {
   }
 
   let suggestedReplacementId: string | undefined;
-  if (health !== 'OPTIMAL') {
+  if (health === 'NEEDS_SPOTTER' && ex.soloAlternativeId) {
+    suggestedReplacementId = ex.soloAlternativeId;
+  } else if (health !== 'OPTIMAL') {
     suggestedReplacementId = findBestReplacementExercise({
       currentExerciseId: exerciseId,
       slotRole,
@@ -500,6 +520,7 @@ export function findBestReplacementExercise(params: {
 
   const candidates = exercises.filter((cand) => {
     if (cand.id === currentExerciseId) return false;
+    if (needsSpotterWithoutBuddy(cand, session)) return false;
     if (slotRole === 'PRIMARY') return Boolean(cand.isPrimaryAnchorCandidate);
     if (slotRole === 'FINISHER') return Boolean(cand.isFinisherCandidate);
     return !cand.isFinisherCandidate;
@@ -569,6 +590,29 @@ export function evaluateSessionSafeguards(
   }
 
   const primaryEx = exerciseMap.get(session.primaryLiftId);
+
+  const spotterIds = new Set<string>();
+  [
+    session.primaryLiftId,
+    ...session.supersets.flatMap((ss) => [ss.exerciseAId, ss.exerciseBId]),
+    ...session.finishers.map((f) => f.exerciseId),
+  ].forEach((id) => {
+    if (needsSpotterWithoutBuddy(exerciseMap.get(id), session)) spotterIds.add(id);
+  });
+  for (const id of spotterIds) {
+    const ex = exerciseMap.get(id)!;
+    const alt = ex.soloAlternativeId ? exerciseMap.get(ex.soloAlternativeId) : undefined;
+    alerts.push({
+      id: `rule_spotter_${id}`,
+      rule: 'SPOTTER_REQUIRED',
+      severity: 'CRITICAL',
+      title: `No spotter for ${ex.name}`,
+      message: `${ex.name} should only be pushed hard with a spotter, and this session is marked as solo.`,
+      recommendation: alt
+        ? `Swap to ${alt.name}, or tick "Buddy" on the session if someone is spotting you.`
+        : 'Tick "Buddy" on the session if someone is spotting you, or choose a self-spotting alternative.',
+    });
+  }
 
   for (let i = 0; i < session.supersets.length; i++) {
     const ss = session.supersets[i];
@@ -707,11 +751,7 @@ export function rankSupersetsForSession(
         tags.push('Ideal for Split');
       }
 
-      if (
-        (session.splitType === 'BUDDY_UPPER' ||
-          session.splitType === 'BUDDY_LOWER') &&
-        ss.buddyFriendly
-      ) {
+      if (session.withBuddy && ss.buddyFriendly) {
         score += 15;
         tags.push('Buddy Station Swap');
       }
