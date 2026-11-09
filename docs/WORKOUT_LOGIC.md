@@ -61,6 +61,7 @@ As sessions are logged, the engine inspects the most recent completed session an
 - **Upper / Lower (2, 3, or 4 days/week)**:
   - If previous session was Lower (`LOWER`), suggest Upper (`UPPER`).
   - If previous session was Upper, suggest Lower.
+- **Switching a session's split** (e.g. Lower $\rightarrow$ Upper in the Plan view, or Pivot in Current Session) re-picks **all** exercises for the new focus via `rebuildSessionForSplit`: primary lift (with the Squat/Deadlift flip-flop and buddy/spotter rules), supersets and finishers. It keeps the session's date, notes, Buddy/Solo flag, status and its number of supersets/finishers. Manual exercise edits on that session are replaced.
 - **PPL (2, 3, or 4 days/week)**:
   - Cycles `PPL_PUSH` $\rightarrow$ `PPL_PULL` $\rightarrow$ `PPL_LEGS` $\rightarrow$ `PPL_PUSH`.
 - **Primary Lift Suggestion**:

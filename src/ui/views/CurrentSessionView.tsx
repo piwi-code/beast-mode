@@ -34,10 +34,8 @@ import {
   WorkoutSession,
 } from '../../domain/models/types';
 import {
-  SPLIT_LABELS,
   SPLIT_SHORT_LABELS,
-  buildDraftSessionFromSuggestion,
-  getPrimaryLiftCandidatesForSplit,
+  rebuildSessionForSplit,
   resizeSupersetTargetSets,
   suggestNextSession,
 } from '../../domain/engine/sequencer';
@@ -248,33 +246,17 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
   };
 
   const handlePivotWholeSession = async (newSplit: SessionSplitType) => {
-    const withBuddy = Boolean(activeSession.withBuddy);
-    const baseSuggestion = suggestNextSession(
-      plan,
-      completedSessions,
-      new Date(activeSession.date),
-      withBuddy
+    if (newSplit === activeSession.splitType) return;
+    await onUpdateActiveSession(
+      rebuildSessionForSplit(
+        activeSession,
+        newSplit,
+        plan,
+        completedSessions,
+        exercises,
+        curatedSupersets
+      )
     );
-    const rebuilt = buildDraftSessionFromSuggestion(
-      {
-        ...baseSuggestion,
-        splitType: newSplit,
-        splitLabel: SPLIT_LABELS[newSplit],
-        recommendedPrimaryLiftId: getPrimaryLiftCandidatesForSplit(
-          newSplit,
-          withBuddy
-        ).recommended,
-      },
-      exercises,
-      curatedSupersets,
-      activeSession.date,
-      'ACTIVE'
-    );
-    await onUpdateActiveSession({
-      ...rebuilt,
-      id: activeSession.id,
-      notes: activeSession.notes,
-    });
     setShowSessionOptions(false);
   };
 

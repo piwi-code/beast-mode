@@ -177,11 +177,19 @@ export function getDefaultFinishersForSplit(
     : ['rope_face_pull', 'farmers_carry_turf'];
 }
 
+export interface SuggestionOverrides {
+  /** Build the suggestion for this split instead of the next one in the rotation. */
+  split?: SessionSplitType;
+  supersetCount?: 2 | 3 | 4;
+  finisherCount?: 1 | 2;
+}
+
 export function suggestNextSession(
   plan: PlanConfig,
   priorSessions: WorkoutSession[],
   referenceDate: Date = new Date(),
-  withBuddyOverride?: boolean
+  withBuddyOverride?: boolean,
+  overrides: SuggestionOverrides = {}
 ): NextSessionSuggestion {
   const withBuddy = withBuddyOverride ?? isBuddyDay(plan, referenceDate);
   const rotation = getRotationForPlan(plan);
@@ -207,6 +215,11 @@ export function suggestNextSession(
       nextSplit = lastWasLower ? rotation[0] : rotation[1] || rotation[0];
       rationale = `Last session was ${SPLIT_SHORT_LABELS[lastSession.splitType]} → alternating to ${SPLIT_SHORT_LABELS[nextSplit]}.`;
     }
+  }
+
+  if (overrides.split) {
+    nextSplit = overrides.split;
+    rationale = `Switched to ${SPLIT_SHORT_LABELS[nextSplit]}: exercises re-picked for the new focus.`;
   }
 
   const liftCandidates = getPrimaryLiftCandidatesForSplit(nextSplit, withBuddy);
@@ -242,12 +255,12 @@ export function suggestNextSession(
 
   const recommendedSupersetIds = getDefaultSupersetsForSplit(
     nextSplit,
-    plan.targetSupersetsPerSession,
+    overrides.supersetCount ?? plan.targetSupersetsPerSession,
     withBuddy
   );
   const recommendedFinisherIds = getDefaultFinishersForSplit(
     nextSplit,
-    plan.targetFinishersPerSession
+    overrides.finisherCount ?? plan.targetFinishersPerSession
   );
 
   return {
@@ -361,6 +374,61 @@ export function buildDraftSessionFromSuggestion(
     totalAxialLoad: 0,
     includeInProjectedLoad: true,
     status,
+  };
+}
+
+/**
+ * Re-picks a session's exercises for a new split (e.g. Lower -> Upper):
+ * primary lift (incl. Squat/Deadlift flip-flop and buddy/spotter rules),
+ * supersets and finishers all change to suit the new focus. Keeps the
+ * session's id, date, status, notes, buddy flag and how many supersets /
+ * finishers it had.
+ */
+export function rebuildSessionForSplit(
+  session: WorkoutSession,
+  newSplit: SessionSplitType,
+  plan: PlanConfig,
+  priorSessions: WorkoutSession[],
+  exercises: Exercise[],
+  curatedSupersets: SupersetPair[]
+): WorkoutSession {
+  const sessionTime = new Date(session.date).getTime();
+  const prior = priorSessions.filter(
+    (s) => s.id !== session.id && new Date(s.date).getTime() < sessionTime
+  );
+  const ssCount = session.supersets.length;
+  const finCount = session.finishers.length;
+
+  const suggestion = suggestNextSession(
+    plan,
+    prior,
+    new Date(session.date),
+    Boolean(session.withBuddy),
+    {
+      split: newSplit,
+      supersetCount:
+        ssCount >= 2 && ssCount <= 4
+          ? (ssCount as 2 | 3 | 4)
+          : plan.targetSupersetsPerSession,
+      finisherCount:
+        finCount >= 1 && finCount <= 2
+          ? (finCount as 1 | 2)
+          : plan.targetFinishersPerSession,
+    }
+  );
+  const rebuilt = buildDraftSessionFromSuggestion(
+    suggestion,
+    exercises,
+    curatedSupersets,
+    session.date,
+    session.status === 'ACTIVE' ? 'ACTIVE' : 'PLANNED'
+  );
+  return {
+    ...rebuilt,
+    id: session.id,
+    status: session.status,
+    notes: session.notes,
+    includeInProjectedLoad: session.includeInProjectedLoad,
   };
 }
 

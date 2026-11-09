@@ -28,11 +28,10 @@ import {
   WorkoutSession,
 } from '../../domain/models/types';
 import {
-  SPLIT_LABELS,
   SPLIT_SHORT_LABELS,
   buildDraftSessionFromSuggestion,
-  getPrimaryLiftCandidatesForSplit,
   getRotationForPlan,
+  rebuildSessionForSplit,
   suggestNextSession,
 } from '../../domain/engine/sequencer';
 import {
@@ -147,39 +146,17 @@ export const PlanView: React.FC<PlanViewProps> = ({
     session: WorkoutSession,
     newSplit: SessionSplitType
   ) => {
-    const priorAll = [...completedSessions, ...sortedPlanned].filter(
-      (s) =>
-        s.id !== session.id &&
-        new Date(s.date).getTime() < new Date(session.date).getTime()
+    if (newSplit === session.splitType) return;
+    await onSaveSession(
+      rebuildSessionForSplit(
+        session,
+        newSplit,
+        plan,
+        [...completedSessions, ...sortedPlanned],
+        exercises,
+        curatedSupersets
+      )
     );
-    const withBuddy = Boolean(session.withBuddy);
-    const baseSuggestion = suggestNextSession(
-      plan,
-      priorAll,
-      new Date(session.date),
-      withBuddy
-    );
-    const rebuilt = buildDraftSessionFromSuggestion(
-      {
-        ...baseSuggestion,
-        splitType: newSplit,
-        splitLabel: SPLIT_LABELS[newSplit],
-        recommendedPrimaryLiftId: getPrimaryLiftCandidatesForSplit(
-          newSplit,
-          withBuddy
-        ).recommended,
-      },
-      exercises,
-      curatedSupersets,
-      session.date,
-      'PLANNED'
-    );
-    await onSaveSession({
-      ...rebuilt,
-      id: session.id,
-      notes: session.notes,
-      includeInProjectedLoad: session.includeInProjectedLoad,
-    });
   };
 
   const volumeSummaries = computeMuscleVolumeSummaries(
