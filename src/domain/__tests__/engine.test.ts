@@ -123,7 +123,7 @@ describe('Beast Mode Domain Engine', () => {
 
     const nextPull = suggestNextSession(pplPlan, [prevPush]);
     expect(nextPull.splitType).toBe('PPL_PULL');
-    expect(nextPull.recommendedPrimaryLiftId).toBe('weighted_pullup');
+    expect(nextPull.recommendedPrimaryLiftId).toBe('bb_deadlift');
   });
 
   it('triggers Red Intra-Session Overwork and Quick Switch suggestion when Squat + RDL are combined', () => {

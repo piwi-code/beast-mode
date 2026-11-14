@@ -114,7 +114,9 @@ export function isExerciseStyleAlignedWithSplit(
   if (splitType === 'PPL_PULL') {
     return (
       exercise.primaryMuscles.some((m) => PULL_MUSCLES.includes(m)) ||
-      exercise.id === 'cable_lateral_raise'
+      exercise.id === 'cable_lateral_raise' ||
+      // Deadlifts are the classic Pull-day main lift
+      exercise.mainLiftCategory === 'DEADLIFT'
     );
   }
 

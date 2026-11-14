@@ -61,11 +61,22 @@ export function getPrimaryLiftCandidatesForSplit(
             alternatives: ['db_incline_press', 'bb_ohp'],
           };
     case 'PPL_PULL':
+      // Classic PPL: Bench (Push), Deadlift (Pull), Squat (Legs)
       return {
-        recommended: 'weighted_pullup',
-        alternatives: ['bb_pendlay_row', 'lat_pulldown_neutral'],
+        recommended: 'bb_deadlift',
+        alternatives: ['bb_pendlay_row', 'lat_pulldown_neutral', 'weighted_pullup'],
       };
     case 'PPL_LEGS':
+      // Deadlift lives on Pull day, so Legs stays squat-pattern
+      return withBuddy
+        ? {
+            recommended: 'bb_back_squat',
+            alternatives: ['leg_press_machine', 'bb_rdl'],
+          }
+        : {
+            recommended: 'leg_press_machine',
+            alternatives: ['db_bulgarian_split_squat', 'bb_rdl'],
+          };
     case 'LOWER':
       return withBuddy
         ? {
@@ -268,7 +279,8 @@ export function suggestNextSession(
   let recommendedPrimaryLiftId = liftCandidates.recommended;
   let alternativePrimaryLiftIds = [...liftCandidates.alternatives];
 
-  if (isLowerSplit(nextSplit)) {
+  // Upper/Lower only: PPL already separates Deadlift (Pull) from Squat (Legs)
+  if (nextSplit === 'LOWER') {
     const lastLower = sorted.find((s) => isLowerSplit(s.splitType));
     // Squat pattern on a solo day = Leg Press (no spotter needed)
     const squatId = withBuddy ? 'bb_back_squat' : 'leg_press_machine';

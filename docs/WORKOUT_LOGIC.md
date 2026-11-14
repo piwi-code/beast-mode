@@ -29,6 +29,7 @@ The app supports choosing a **Plan Type** (`PPL` or `UPPER_LOWER`) and a **Weekl
 ### Split 1: Push / Pull / Legs (PPL)
 Classic rolling split separating movement planes. Works across 2, 3, or 4 sessions/week by cycling `PUSH` $\rightarrow$ `PULL` $\rightarrow$ `LEGS` continuously across weeks:
 - **Push Day (`PPL_PUSH`)**: Heavy pressing (Flat Barbell Bench, Overhead Press), triceps isolation (pushdowns/skull crushers), chest flyes, lateral delts.
+- **Main lifts**: Bench Press (Push), Deadlift (Pull), Back Squat (Legs; Leg Press on solo sessions). The Squat/Deadlift flip-flop applies only to Upper/Lower plans.
 - **Pull Day (`PPL_PULL`)**: Vertical pulls (Lat Pulldowns, Pull-ups), horizontal rows, rear delts, and bicep volume.
 - **Leg Day (`PPL_LEGS`)**: Knee-dominant compound (Back Squat), posterior chain hinge (Deadlift/RDL), hamstring curls, calf raises, core decompression, and turf sled finisher.
 

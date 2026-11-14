@@ -11,6 +11,7 @@ import {
 import {
   evaluateExerciseSlot,
   evaluateSessionSafeguards,
+  isExerciseStyleAlignedWithSplit,
 } from '../engine/rulesEngine';
 import {
   isBuddyDay,
@@ -96,6 +97,20 @@ describe('buddy (spotter) availability', () => {
     });
     expect(ev.health).toBe('NEEDS_SPOTTER');
     expect(ev.suggestedReplacementId).toBe('leg_press_machine');
+  });
+
+  it('PPL main lifts are Bench / Deadlift / Squat, with no deadlift flip-flop on Legs', () => {
+    const ppl: PlanConfig = { ...tueBuddyPlan, scheduleFamily: 'PPL' };
+    const lift = (split: 'PPL_PUSH' | 'PPL_PULL' | 'PPL_LEGS', prior: WorkoutSession[] = []) =>
+      suggestNextSession(ppl, prior, TUESDAY, true, { split }).recommendedPrimaryLiftId;
+    expect(lift('PPL_PUSH')).toBe('bb_flat_bench');
+    expect(lift('PPL_PULL')).toBe('bb_deadlift');
+    expect(lift('PPL_LEGS')).toBe('bb_back_squat');
+    const lastLegsSquat: WorkoutSession = { ...upperAfterLower, splitType: 'PPL_LEGS' };
+    expect(lift('PPL_LEGS', [lastLegsSquat])).toBe('bb_back_squat');
+    expect(
+      isExerciseStyleAlignedWithSplit(exerciseMap.get('bb_deadlift')!, 'PPL_PULL')
+    ).toBe(true);
   });
 
   it('also applies to PPL push days and can be overridden per session', () => {

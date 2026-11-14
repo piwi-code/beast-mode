@@ -96,6 +96,6 @@ describe('switching a session to a different split', () => {
   it('works for PPL splits too', () => {
     const push = rebuildSessionForSplit(lowerSession(), 'PPL_PULL', buddyPlan, [], SEED_EXERCISES, SEED_SUPERSETS);
     expect(push.splitType).toBe('PPL_PULL');
-    expect(push.primaryLiftId).toBe('weighted_pullup');
+    expect(push.primaryLiftId).toBe('bb_deadlift');
   });
 });
