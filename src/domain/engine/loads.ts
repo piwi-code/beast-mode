@@ -337,3 +337,14 @@ export function getDropSetWeights(
   }
   return weights;
 }
+
+/** True once any set or finisher round has been ticked off. */
+export function hasLoggedWork(session: WorkoutSession): boolean {
+  return (
+    session.primaryLiftSets.some((s) => s.completed) ||
+    session.supersets.some(
+      (b) => b.setsA.some((s) => s.completed) || b.setsB.some((s) => s.completed)
+    ) ||
+    session.finishers.some((f) => f.completedRounds > 0)
+  );
+}

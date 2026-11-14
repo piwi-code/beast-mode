@@ -23,7 +23,7 @@ import {
   suggestNextSession,
 } from '../domain/engine/sequencer';
 import { calculateSessionAxialLoad } from '../domain/engine/rulesEngine';
-import { applySuggestedLoads } from '../domain/engine/loads';
+import { applySuggestedLoads, hasLoggedWork } from '../domain/engine/loads';
 import { useWorkoutRepository } from '../data/context/RepositoryContext';
 import { PlanView } from './views/PlanView';
 import { CurrentSessionView } from './views/CurrentSessionView';
@@ -94,11 +94,23 @@ export const App: React.FC = () => {
     if (activeSession && activeSession.id !== session.id) {
       await repo.saveSession({ ...activeSession, status: 'PLANNED' });
     }
-    await repo.saveSession({
+    // Weights were suggested for the planned date; refresh them for today
+    // (planned sessions have no logged sets yet, and completed sets are never touched).
+    const started: WorkoutSession = {
       ...session,
       status: 'ACTIVE',
       date: new Date().toISOString(),
-    });
+    };
+    await repo.saveSession(
+      hasLoggedWork(session)
+        ? started // resumed session: keep its weights as they are
+        : applySuggestedLoads(
+            undefined,
+            started,
+            sessions,
+            new Map(exercises.map((e) => [e.id, e]))
+          )
+    );
     setSessions(await repo.getSessions());
     setActivePage('CURRENT');
   };

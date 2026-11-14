@@ -15,6 +15,9 @@ import {
   Sparkles,
   Split,
   Trash2,
+  TrendingDown,
+  TrendingUp,
+  Weight,
   Wand2,
 } from 'lucide-react';
 import {
@@ -53,6 +56,11 @@ import { ExercisePicker, SupersetPicker } from '../components/ExercisePicker';
 import { ScrollCarousel } from '../components/ScrollCarousel';
 import { BuddyBadge, BuddyToggle } from '../components/BuddyToggle';
 import { isBuddyDay, setSessionBuddy } from '../../domain/engine/splits';
+import {
+  getDropSetWeights,
+  suggestFinisherLoad,
+  suggestLoad,
+} from '../../domain/engine/loads';
 
 interface PlanViewProps {
   plan: PlanConfig;
@@ -172,6 +180,81 @@ export const PlanView: React.FC<PlanViewProps> = ({
   const overworkCount = volumeSummaries.filter(
     (v) => v.statusProjected === 'OVERTRAINING_RISK' || v.recovery48hFlag
   ).length;
+
+  // Suggested weight for an exercise on the session's planned date. It is
+  // recalculated when the session is actually started.
+  const renderLoadNote = (
+    exerciseId: string,
+    setCount: number,
+    sessionDate: string
+  ) => {
+    const suggestion = suggestLoad(
+      exerciseId,
+      Math.max(1, setCount),
+      completedSessions,
+      exerciseMap,
+      new Date(sessionDate)
+    );
+    const top = suggestion.sets.reduce((a, b) => (b.weightKg > a.weightKg ? b : a));
+    const adj = suggestion.adjustment;
+    const reason = adj
+      ? adj.note
+      : suggestion.source === 'history'
+        ? 'Same as last time.'
+        : 'Starting estimate: no history for this exercise yet.';
+    return (
+      <div className="mt-1.5 rounded-lg border border-zinc-800 bg-zinc-950/60 px-2.5 py-1.5 text-[11px] leading-snug text-zinc-400">
+        <div className="flex items-center gap-1.5">
+          {adj?.kind === 'BREAK' ? (
+            <TrendingDown className="h-3.5 w-3.5 shrink-0 text-sky-400" />
+          ) : adj?.kind === 'PROGRESS' ? (
+            <TrendingUp className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+          ) : (
+            <Weight className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
+          )}
+          <span>
+            Suggested top set:{' '}
+            <strong className="text-zinc-100">
+              {top.weightKg > 0 ? `${top.weightKg} kg` : 'Bodyweight'} × {top.reps}
+            </strong>{' '}
+            · {setCount} sets
+          </span>
+        </div>
+        <div className="mt-0.5 text-zinc-500">{reason}</div>
+      </div>
+    );
+  };
+
+  const renderFinisherLoadNote = (
+    fin: SessionFinisherBlock,
+    sessionDate: string
+  ) => {
+    const ex = exerciseMap.get(fin.exerciseId);
+    const loadKg =
+      suggestFinisherLoad(
+        fin.exerciseId,
+        completedSessions,
+        exerciseMap,
+        new Date(sessionDate)
+      ) ??
+      fin.loadKg ??
+      ex?.finisherLoadKg;
+    if (loadKg === undefined) return null;
+    return (
+      <div className="mt-1.5 flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-950/60 px-2.5 py-1.5 text-[11px] text-zinc-400">
+        <Weight className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
+        <span>
+          Suggested:{' '}
+          <strong className="text-zinc-100">
+            {ex?.dropSetDrops
+              ? `${getDropSetWeights(loadKg, ex.loadStepKg, ex.dropSetDrops).join(' → ')} kg`
+              : `${loadKg} kg`}
+          </strong>{' '}
+          · {fin.rounds} rounds
+        </span>
+      </div>
+    );
+  };
 
   const renderSlotBadgeAndQuickSwitch = (
     evalResult: ExerciseSlotEvaluation,
@@ -645,6 +728,12 @@ export const PlanView: React.FC<PlanViewProps> = ({
                         }
                       />
 
+                      {renderLoadNote(
+                        session.primaryLiftId,
+                        session.primaryLiftSets.length,
+                        session.date
+                      )}
+
                       {renderSlotBadgeAndQuickSwitch(primaryEval, (repId) =>
                         onSaveSession({ ...session, primaryLiftId: repId })
                       )}
@@ -839,6 +928,11 @@ export const PlanView: React.FC<PlanViewProps> = ({
                                         })
                                       }
                                     />
+                                    {renderLoadNote(
+                                      exId,
+                                      (slot === 'A' ? ss.setsA : ss.setsB).length,
+                                      session.date
+                                    )}
                                     {renderSlotBadgeAndQuickSwitch(
                                       slotEval,
                                       (repId) =>
@@ -951,6 +1045,7 @@ export const PlanView: React.FC<PlanViewProps> = ({
                                   </button>
                                 )}
                               </div>
+                              {renderFinisherLoadNote(fin, session.date)}
                               {renderSlotBadgeAndQuickSwitch(evalFin, (repId) =>
                                 onSaveSession({
                                   ...session,
