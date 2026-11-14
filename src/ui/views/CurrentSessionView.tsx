@@ -19,6 +19,8 @@ import {
   Sparkles,
   Split,
   Trash2,
+  TrendingDown,
+  TrendingUp,
   Wand2,
   XCircle,
 } from 'lucide-react';
@@ -59,7 +61,7 @@ import {
   setSessionBuddy,
 } from '../../domain/engine/splits';
 import { estimateOneRepMax } from '../../domain/engine/oneRepMax';
-import { getDropSetWeights } from '../../domain/engine/loads';
+import { getDropSetWeights, suggestLoad } from '../../domain/engine/loads';
 
 interface CurrentSessionViewProps {
   plan: PlanConfig;
@@ -438,6 +440,62 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
     </div>
   );
 
+  // Explains a break reduction / progression bump for an exercise. If the
+  // sets on screen differ from the suggestion, offers a one-tap apply.
+  const renderLoadHint = (
+    exerciseId: string | undefined,
+    sets: LoggedSet[],
+    onApply: (next: LoggedSet[]) => void
+  ) => {
+    if (!exerciseId || sets.every((s) => s.completed)) return null;
+    const suggestion = suggestLoad(
+      exerciseId,
+      sets.length,
+      completedSessions,
+      exerciseMap,
+      new Date(activeSession.date)
+    );
+    const adj = suggestion.adjustment;
+    if (!adj) return null;
+    const applied = sets.every(
+      (s, i) => s.completed || s.weightKg === suggestion.sets[i].weightKg
+    );
+    const isBreak = adj.kind === 'BREAK';
+    return (
+      <div
+        className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs ${
+          isBreak
+            ? 'border-sky-500/40 bg-sky-950/40 text-sky-200'
+            : 'border-emerald-500/40 bg-emerald-950/30 text-emerald-200'
+        }`}
+      >
+        <div className="flex min-w-0 flex-1 items-start gap-1.5">
+          {isBreak ? (
+            <TrendingDown className="mt-0.5 h-4 w-4 shrink-0 text-sky-400" />
+          ) : (
+            <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+          )}
+          <span>{adj.note}</span>
+        </div>
+        {!applied && (
+          <button
+            type="button"
+            onClick={() =>
+              onApply(
+                sets.map((s, i) =>
+                  s.completed ? s : { ...s, ...suggestion.sets[i] }
+                )
+              )
+            }
+            className="inline-flex h-9 items-center rounded-lg bg-zinc-900 px-3 text-xs font-bold text-emerald-300 active:scale-95 transition"
+          >
+            Use {adj.toKg} kg
+          </button>
+        )}
+      </div>
+    );
+  };
+
   const primaryEval = evaluateExerciseSlot({
     exerciseId: activeSession.primaryLiftId,
     slotRole: 'PRIMARY',
@@ -640,6 +698,13 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                 ...activeSession,
                 primaryLiftId: repId,
               })
+            )}
+
+            {renderLoadHint(
+              activeSession.primaryLiftId,
+              activeSession.primaryLiftSets,
+              (next) =>
+                onUpdateActiveSession({ ...activeSession, primaryLiftSets: next })
             )}
 
             <div className="space-y-2">
@@ -945,6 +1010,22 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                                     ...(slot === 'A'
                                       ? { exerciseAId: repId }
                                       : { exerciseBId: repId }),
+                                  }
+                                : s
+                            ),
+                          })
+                        )}
+
+                        {renderLoadHint(ex?.id, sets, (next) =>
+                          onUpdateActiveSession({
+                            ...activeSession,
+                            supersets: activeSession.supersets.map((s) =>
+                              s.id === block.id
+                                ? {
+                                    ...s,
+                                    ...(slot === 'A'
+                                      ? { setsA: next }
+                                      : { setsB: next }),
                                   }
                                 : s
                             ),

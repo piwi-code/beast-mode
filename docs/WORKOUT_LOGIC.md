@@ -115,6 +115,9 @@ The application executes dynamic validation checks in real time as exercises, su
 
 - **Last recorded first**: when an exercise is added to a session (new session, new superset, exercise swap, split switch), its sets start from the weights and reps logged the last time that exercise was completed, whether as a primary lift or in a superset. Finishers reuse their last finisher load.
 - **Otherwise an estimate**: the exercise's `startingLoadKg`, or a rough default for its equipment type. This is a starting guess; it is not derived from other lifts.
+- **Break reduction**: if the exercise was last done 3+ weeks before the session date, the last recorded weights are eased back: 10% at 3–6 weeks, 15% at 6–12 weeks, 20% at 12+ weeks (`BREAK_TIERS`), rounded to the exercise's weight jump and always at least one jump down. Reps are kept. Finisher loads get the same reduction. Takes priority over progression.
+- **Progression**: otherwise, if every completed set last time reached the top of the exercise's rep range (`defaultReps`, e.g. 8 for "5-8"), the weight goes up one jump (2.5 kg; 5 kg for barbell/machine squat and hinge lifts) and reps reset to the bottom of the range. Exercises without a rep range (carries, sleds) and finishers do not auto-progress.
+- **Explained on screen**: the Current Session view shows why a weight was changed, with a one-tap "Use N kg" button if the sets on screen differ from the suggestion.
 - **Never overwrites your edits**: only slots whose exercise changed are re-loaded, and sets already ticked off are left alone.
 - **Drop sets**: finishers with `dropSetDrops` show the weights to use, heaviest first. Each drop is about 20% of the start weight, rounded to the exercise's `loadStepKg` (5 kg for fixed barbells) and at least one jump: 30 → 25 → 20, 40 → 30 → 20.
 - **Solo squat days** default to the plate-loaded Leg Press (Back Squat's `soloAlternativeId`); Bulgarian Split Squat remains an alternative.
