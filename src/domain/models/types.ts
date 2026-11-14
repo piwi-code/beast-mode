@@ -55,6 +55,10 @@ export interface Exercise {
   defaultSets?: number;
   defaultReps?: string;
   mainLiftCategory?: 'BENCH' | 'SQUAT' | 'DEADLIFT' | 'OTHER';
+  /** How one finisher round is performed (shown on the finisher card). */
+  finisherProtocol?: string;
+  /** Sensible starting load when used as a finisher. */
+  finisherLoadKg?: number;
   /** Unsafe to take to failure without a spotter (e.g. any barbell bench press). */
   needsSpotter?: boolean;
   /** Safer exercise to use when no buddy/spotter is present. */

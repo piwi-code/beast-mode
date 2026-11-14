@@ -75,7 +75,9 @@ export function isExerciseStyleAlignedWithSplit(
 ): boolean {
   if (
     exercise.pattern === 'CORE_DECOMPRESSION' ||
-    exercise.pattern === 'LOCOMOTION'
+    exercise.pattern === 'LOCOMOTION' ||
+    // Pure core work fits any day
+    exercise.primaryMuscles.every((m) => m === 'CORE')
   ) {
     return true;
   }

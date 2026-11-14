@@ -35,6 +35,9 @@ import {
 } from '../../domain/models/types';
 import {
   SPLIT_SHORT_LABELS,
+  buildFinisherBlock,
+  changeFinisherExercise,
+  pickExtraFinisherId,
   rebuildSessionForSplit,
   resizeSupersetTargetSets,
   suggestNextSession,
@@ -1074,7 +1077,11 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                             ...activeSession,
                             finishers: activeSession.finishers.map((f) =>
                               f.id === fin.id
-                                ? { ...f, exerciseId: pickedId }
+                                ? changeFinisherExercise(
+                                    f,
+                                    exerciseMap.get(pickedId),
+                                    pickedId
+                                  )
                                 : f
                             ),
                           })
@@ -1099,6 +1106,11 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                     )}
                   </div>
 
+                  {fin.protocolNote && (
+                    <p className="text-xs font-semibold text-emerald-300 leading-relaxed">
+                      Each round: {fin.protocolNote}
+                    </p>
+                  )}
                   {ex?.executionDirections && (
                     <p className="text-xs text-zinc-400 leading-relaxed">
                       {ex.executionDirections}
@@ -1149,7 +1161,7 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                      {[1, 2, 3].map((r) => (
+                      {Array.from({ length: fin.rounds }, (_, i) => i + 1).map((r) => (
                         <button
                           key={r}
                           type="button"
@@ -1186,14 +1198,11 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  const newFin: SessionFinisherBlock = {
-                    id: `fin_act_${Date.now()}`,
-                    exerciseId: 'farmers_carry_turf',
-                    rounds: 3,
-                    protocolNote: '3 rounds controlled tempo',
-                    loadKg: 25,
-                    completedRounds: 0,
-                  };
+                  const finId = pickExtraFinisherId(activeSession, exercises);
+                  const newFin = buildFinisherBlock(
+                    exerciseMap.get(finId),
+                    finId
+                  );
                   onUpdateActiveSession({
                     ...activeSession,
                     finishers: [...activeSession.finishers, newFin],

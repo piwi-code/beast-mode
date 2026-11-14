@@ -31,6 +31,9 @@ import {
   SPLIT_SHORT_LABELS,
   buildDraftSessionFromSuggestion,
   getRotationForPlan,
+  buildFinisherBlock,
+  changeFinisherExercise,
+  pickExtraFinisherId,
   rebuildSessionForSplit,
   suggestNextSession,
 } from '../../domain/engine/sequencer';
@@ -876,14 +879,11 @@ export const PlanView: React.FC<PlanViewProps> = ({
                           <button
                             type="button"
                             onClick={() => {
-                              const newFin: SessionFinisherBlock = {
-                                id: `fin_${Date.now()}`,
-                                exerciseId: 'farmers_carry_turf',
-                                rounds: 3,
-                                protocolNote: '3 rounds controlled tempo',
-                                loadKg: 25,
-                                completedRounds: 0,
-                              };
+                              const finId = pickExtraFinisherId(session, exercises);
+                              const newFin = buildFinisherBlock(
+                                exerciseMap.get(finId),
+                                finId
+                              );
                               onSaveSession({
                                 ...session,
                                 finishers: [...session.finishers, newFin],
@@ -924,10 +924,11 @@ export const PlanView: React.FC<PlanViewProps> = ({
                                       ...session,
                                       finishers: session.finishers.map((f) =>
                                         f.id === fin.id
-                                          ? {
-                                              ...f,
-                                              exerciseId: pickedId,
-                                            }
+                                          ? changeFinisherExercise(
+                                              f,
+                                              exerciseMap.get(pickedId),
+                                              pickedId
+                                            )
                                           : f
                                       ),
                                     })
@@ -955,7 +956,11 @@ export const PlanView: React.FC<PlanViewProps> = ({
                                   ...session,
                                   finishers: session.finishers.map((f) =>
                                     f.id === fin.id
-                                      ? { ...f, exerciseId: repId }
+                                      ? changeFinisherExercise(
+                                          f,
+                                          exerciseMap.get(repId),
+                                          repId
+                                        )
                                       : f
                                   ),
                                 })

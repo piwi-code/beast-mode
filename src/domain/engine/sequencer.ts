@@ -172,9 +172,48 @@ export function getDefaultFinishersForSplit(
       ? ['turf_sled_push_pull']
       : ['turf_sled_push_pull', 'farmers_carry_turf'];
   }
-  return count === 1
-    ? ['rope_face_pull']
-    : ['rope_face_pull', 'farmers_carry_turf'];
+  // Upper/Push/Pull: posture work first, then the to-failure pump finisher last
+  // (a curl drop set before face pulls would fry the grip and biceps they rely on).
+  const pump =
+    splitType === 'PPL_PUSH' ? 'cable_pushdown_drop_set' : 'bb_curl_drop_set';
+  return count === 1 ? ['rope_face_pull'] : ['rope_face_pull', pump];
+}
+
+/** Builds a finisher block with the exercise's own protocol and starting load. */
+export function buildFinisherBlock(
+  exercise: Exercise | undefined,
+  exerciseId: string
+): SessionFinisherBlock {
+  return {
+    id: `fin_block_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    exerciseId,
+    rounds: Math.min(3, exercise?.defaultSets ?? 3),
+    protocolNote: exercise?.finisherProtocol ?? '3 rounds, controlled tempo',
+    loadKg: exercise?.finisherLoadKg ?? 20,
+    completedRounds: 0,
+  };
+}
+
+/** Swaps a finisher's exercise and resets its protocol, rounds and load to match. */
+export function changeFinisherExercise(
+  block: SessionFinisherBlock,
+  exercise: Exercise | undefined,
+  exerciseId: string
+): SessionFinisherBlock {
+  return { ...buildFinisherBlock(exercise, exerciseId), id: block.id };
+}
+
+/** Picks a sensible extra finisher for "+ Add Finisher" that is not already in the session. */
+export function pickExtraFinisherId(
+  session: WorkoutSession,
+  exercises: Exercise[]
+): string {
+  const used = new Set(session.finishers.map((f) => f.exerciseId));
+  const preferred = [
+    ...getDefaultFinishersForSplit(session.splitType, 2),
+    ...exercises.filter((e) => e.isFinisherCandidate).map((e) => e.id),
+  ];
+  return preferred.find((id) => !used.has(id)) ?? preferred[0];
 }
 
 export interface SuggestionOverrides {
@@ -347,19 +386,7 @@ export function buildDraftSessionFromSuggestion(
   });
 
   const finishers: SessionFinisherBlock[] = suggestion.recommendedFinisherIds.map(
-    (finId, idx) => {
-      const isSled = finId === 'turf_sled_push_pull';
-      return {
-        id: `fin_block_${Date.now()}_${Math.random().toString(36).slice(2, 6)}_${idx}`,
-        exerciseId: finId,
-        rounds: 3,
-        protocolNote: isSled
-          ? '15–20m Forward Push + 15–20m Backward Drag (60–90s rest or You-Go-I-Go)'
-          : '3x15–20 controlled external rotation / posture focus (60s rest)',
-        loadKg: isSled ? 25 : 20,
-        completedRounds: 0,
-      };
-    }
+    (finId) => buildFinisherBlock(exerciseMap.get(finId), finId)
   );
 
   return {
