@@ -70,7 +70,7 @@ describe('finishers', () => {
     expect(curl.isFinisherCandidate).toBe(true);
     expect(curl.equipment).toBe('BARBELL');
     const block = buildFinisherBlock(curl, curl.id);
-    expect(block.protocolNote).toMatch(/strip/);
+    expect(block.protocolNote).toMatch(/next bar down/);
     expect(block.loadKg).toBe(30);
     expect(block.rounds).toBe(2);
   });

@@ -39,9 +39,10 @@ When the POC phase ends: enable branch protection on `main` (require PR + passin
 - [x] Swipe carousel for the 14-day planner (no scrollbar, edge arrows) & multi-select Muscle/Equipment filters in the Catalog
 - [x] Per-session Buddy/Solo (spotter) toggle with weekday defaults; spotter-safe auto-selection & "Needs a Spotter" warnings (replaces Buddy/Solo/Hybrid split types)
 - [x] Equipment filter inside the exercise picker is a multi-select dropdown
-- [x] Back Squat flagged as needing a spotter (solo alternative: Dumbbell Bulgarian Split Squat); set-logging rows fit any phone width
+- [x] Back Squat flagged as needing a spotter (solo alternative: Leg Press); set-logging rows fit any phone width
 - [x] Switching a session's split (Plan or live Pivot) re-picks primary, supersets and finishers for the new focus
 - [x] Drop-set pump finishers (Barbell Curl, Cable Pushdown) with per-exercise finisher protocol/load; 10 more exercises and 6 more curated supersets; catalog integrity tests
+- [x] Weights start from the last recorded load per exercise (estimate otherwise); drop-set bar suggestions in 5 kg jumps; Leg Press as the solo squat default; EZ-Bar Curl, Preacher Curl, Seated Calf Raise, Dips + 3 supersets
 - [ ] Built-in auto-starting rest timer (60–90s for supersets/sleds, 2–3m for heavy primary anchors) with Web Audio/Vibration alerts
 - [ ] Shareable Workout Template URLs (encode a planned session into a URL query string so you can text a link to your gym buddy)
 - [ ] Custom Exercise & Custom Superset creator in the UI

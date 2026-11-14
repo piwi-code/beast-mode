@@ -80,7 +80,7 @@ describe('switching a session to a different split', () => {
     const soloUpper: WorkoutSession = { ...lowerSession(), splitType: 'UPPER', withBuddy: false };
     const soloLower = rebuildSessionForSplit(soloUpper, 'LOWER', buddyPlan, [], SEED_EXERCISES, SEED_SUPERSETS);
     expect(allIds(soloLower).some((id) => exMap.get(id)?.needsSpotter)).toBe(false);
-    expect(soloLower.primaryLiftId).toBe('db_bulgarian_split_squat');
+    expect(soloLower.primaryLiftId).toBe('leg_press_machine');
 
     const lastSquat: WorkoutSession = {
       ...lowerSession(),

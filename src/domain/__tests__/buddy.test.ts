@@ -59,7 +59,7 @@ describe('buddy (spotter) availability', () => {
     const upperPrev: WorkoutSession = { ...upperAfterLower, splitType: 'UPPER', primaryLiftId: 'db_flat_bench' };
     const soloLower = suggestNextSession(tueBuddyPlan, [upperPrev], WEDNESDAY);
     expect(soloLower.splitType).toBe('LOWER');
-    expect(soloLower.recommendedPrimaryLiftId).toBe('db_bulgarian_split_squat');
+    expect(soloLower.recommendedPrimaryLiftId).toBe('leg_press_machine');
     expect(soloLower.alternativePrimaryLiftIds).not.toContain('bb_back_squat');
 
     const lastSplitSquat: WorkoutSession = {
@@ -76,7 +76,7 @@ describe('buddy (spotter) availability', () => {
     ).toBe('bb_back_squat');
     expect(
       suggestNextSession(tueBuddyPlan, [lastDeadlift, upperPrev], WEDNESDAY).recommendedPrimaryLiftId
-    ).toBe('db_bulgarian_split_squat');
+    ).toBe('leg_press_machine');
   });
 
   it('flags back squat as needing a spotter on solo sessions', () => {
@@ -95,7 +95,7 @@ describe('buddy (spotter) availability', () => {
       plan: tueBuddyPlan,
     });
     expect(ev.health).toBe('NEEDS_SPOTTER');
-    expect(ev.suggestedReplacementId).toBe('db_bulgarian_split_squat');
+    expect(ev.suggestedReplacementId).toBe('leg_press_machine');
   });
 
   it('also applies to PPL push days and can be overridden per session', () => {

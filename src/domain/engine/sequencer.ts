@@ -14,6 +14,7 @@ import {
   isBuddyDay,
   isLowerSplit,
 } from './splits';
+import { estimateStartingLoad } from './loads';
 
 export { SPLIT_LABELS, SPLIT_SHORT_LABELS } from './splits';
 
@@ -69,11 +70,11 @@ export function getPrimaryLiftCandidatesForSplit(
       return withBuddy
         ? {
             recommended: 'bb_back_squat',
-            alternatives: ['bb_deadlift', 'bb_rdl', 'db_bulgarian_split_squat'],
+            alternatives: ['bb_deadlift', 'bb_rdl', 'leg_press_machine'],
           }
         : {
-            recommended: 'db_bulgarian_split_squat',
-            alternatives: ['bb_deadlift', 'bb_rdl'],
+            recommended: 'leg_press_machine',
+            alternatives: ['bb_deadlift', 'bb_rdl', 'db_bulgarian_split_squat'],
           };
   }
 }
@@ -269,10 +270,11 @@ export function suggestNextSession(
 
   if (isLowerSplit(nextSplit)) {
     const lastLower = sorted.find((s) => isLowerSplit(s.splitType));
-    // Squat pattern on a solo day = Bulgarian Split Squat (no spotter needed)
-    const squatId = withBuddy ? 'bb_back_squat' : 'db_bulgarian_split_squat';
+    // Squat pattern on a solo day = Leg Press (no spotter needed)
+    const squatId = withBuddy ? 'bb_back_squat' : 'leg_press_machine';
     const lastWasSquat =
       lastLower?.primaryLiftId === 'bb_back_squat' ||
+      lastLower?.primaryLiftId === 'leg_press_machine' ||
       lastLower?.primaryLiftId === 'db_bulgarian_split_squat';
     if (lastWasSquat) {
       recommendedPrimaryLiftId = 'bb_deadlift';
@@ -336,18 +338,7 @@ export function buildDraftSessionFromSuggestion(
   const primaryExercise = exerciseMap.get(primaryLiftId);
   const primarySetCount = primaryExercise?.defaultSets ?? 4;
 
-  const defaultPrimaryWeight =
-    primaryExercise?.id === 'bb_back_squat'
-      ? 110
-      : primaryExercise?.id === 'bb_deadlift'
-      ? 130
-      : primaryExercise?.id === 'bb_rdl'
-      ? 95
-      : primaryExercise?.id === 'bb_flat_bench'
-      ? 85
-      : primaryExercise?.id === 'db_bulgarian_split_squat'
-      ? 20
-      : 60;
+  const defaultPrimaryWeight = estimateStartingLoad(primaryExercise);
 
   const primaryLiftSets = Array.from({ length: primarySetCount }, (_, idx) => ({
     setNumber: idx + 1,

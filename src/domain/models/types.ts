@@ -55,6 +55,12 @@ export interface Exercise {
   defaultSets?: number;
   defaultReps?: string;
   mainLiftCategory?: 'BENCH' | 'SQUAT' | 'DEADLIFT' | 'OTHER';
+  /** Rough starting weight when there is no history for this exercise yet. */
+  startingLoadKg?: number;
+  /** Smallest weight jump available (e.g. 5 for fixed barbells). Defaults to 2.5. */
+  loadStepKg?: number;
+  /** Number of weight drops per round when this is a drop-set finisher. */
+  dropSetDrops?: number;
   /** How one finisher round is performed (shown on the finisher card). */
   finisherProtocol?: string;
   /** Sensible starting load when used as a finisher. */

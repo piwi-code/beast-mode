@@ -23,6 +23,7 @@ import {
   suggestNextSession,
 } from '../domain/engine/sequencer';
 import { calculateSessionAxialLoad } from '../domain/engine/rulesEngine';
+import { applySuggestedLoads } from '../domain/engine/loads';
 import { useWorkoutRepository } from '../data/context/RepositoryContext';
 import { PlanView } from './views/PlanView';
 import { CurrentSessionView } from './views/CurrentSessionView';
@@ -68,9 +69,16 @@ export const App: React.FC = () => {
 
   const handleSaveSession = async (session: WorkoutSession) => {
     const exerciseMap = new Map(exercises.map((e) => [e.id, e]));
+    // New or swapped exercises start from the last recorded weight
+    const withLoads = applySuggestedLoads(
+      sessions.find((s) => s.id === session.id),
+      session,
+      sessions,
+      exerciseMap
+    );
     const withAxial: WorkoutSession = {
-      ...session,
-      totalAxialLoad: calculateSessionAxialLoad(session, exerciseMap),
+      ...withLoads,
+      totalAxialLoad: calculateSessionAxialLoad(withLoads, exerciseMap),
     };
     await repo.saveSession(withAxial);
     setSessions(await repo.getSessions());
@@ -112,7 +120,14 @@ export const App: React.FC = () => {
       new Date().toISOString(),
       'ACTIVE'
     );
-    await repo.saveSession(activeDraft);
+    await repo.saveSession(
+      applySuggestedLoads(
+        undefined,
+        activeDraft,
+        sessions,
+        new Map(exercises.map((e) => [e.id, e]))
+      )
+    );
     setSessions(await repo.getSessions());
     setActivePage('CURRENT');
   };

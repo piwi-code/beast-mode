@@ -21,6 +21,7 @@ beast-mode/
 │   │   ├── models/          # Entities: Exercise, SupersetPair, WorkoutSession, LiftSet, PlanConfig
 │   │   ├── engine/          # Pure business logic:
 │   │   │   ├── sequencer.ts         # Next session & primary lift recommendation engine
+│   │   │   ├── loads.ts             # Weight suggestions (last recorded / estimate) & drop-set weights
 │   │   │   ├── splits.ts            # Split labels, buddy-day & spotter-safety helpers, legacy data migration
 │   │   │   ├── rulesEngine.ts       # Axial load, antagonist pairing, intra-session overlap, 48h lookback
 │   │   │   ├── volumeTracker.ts     # 7-day & 14-day muscle volume balance & superset recommender

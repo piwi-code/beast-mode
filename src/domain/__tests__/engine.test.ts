@@ -39,7 +39,7 @@ describe('Beast Mode Domain Engine', () => {
     expect(suggestion.splitType).toBe('LOWER');
     // No buddy days by default -> solo -> squat pattern without a spotter
     expect(suggestion.withBuddy).toBe(false);
-    expect(suggestion.recommendedPrimaryLiftId).toBe('db_bulgarian_split_squat');
+    expect(suggestion.recommendedPrimaryLiftId).toBe('leg_press_machine');
   });
 
   it('flip-flops Lower primary anchor between Back Squat and Deadlift across consecutive Lower sessions (including 2-day split)', () => {

@@ -59,6 +59,7 @@ import {
   setSessionBuddy,
 } from '../../domain/engine/splits';
 import { estimateOneRepMax } from '../../domain/engine/oneRepMax';
+import { getDropSetWeights } from '../../domain/engine/loads';
 
 interface CurrentSessionViewProps {
   plan: PlanConfig;
@@ -1111,6 +1112,21 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                       Each round: {fin.protocolNote}
                     </p>
                   )}
+                  {ex?.dropSetDrops && (
+                    <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/30 px-3 py-2 text-xs text-emerald-200">
+                      <span className="font-semibold text-zinc-400">
+                        {ex.equipment === 'BARBELL' ? 'Bars to set out: ' : 'Weights: '}
+                      </span>
+                      <span className="font-extrabold">
+                        {getDropSetWeights(
+                          fin.loadKg ?? ex.finisherLoadKg ?? 20,
+                          ex.loadStepKg,
+                          ex.dropSetDrops
+                        ).join(' → ')}{' '}
+                        kg
+                      </span>
+                    </div>
+                  )}
                   {ex?.executionDirections && (
                     <p className="text-xs text-zinc-400 leading-relaxed">
                       {ex.executionDirections}
@@ -1119,7 +1135,9 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
 
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-zinc-400">Load (kg):</span>
+                      <span className="text-xs text-zinc-400">
+                        {ex?.dropSetDrops ? 'Start (kg):' : 'Load (kg):'}
+                      </span>
                       <button
                         type="button"
                         onClick={() =>
@@ -1129,7 +1147,10 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                               f.id === fin.id
                                 ? {
                                     ...f,
-                                    loadKg: Math.max(0, (f.loadKg ?? 25) - 2.5),
+                                    loadKg: Math.max(
+                                      0,
+                                      (f.loadKg ?? 25) - (ex?.loadStepKg ?? 2.5)
+                                    ),
                                   }
                                 : f
                             ),
@@ -1149,7 +1170,11 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                             ...activeSession,
                             finishers: activeSession.finishers.map((f) =>
                               f.id === fin.id
-                                ? { ...f, loadKg: (f.loadKg ?? 25) + 2.5 }
+                                ? {
+                                    ...f,
+                                    loadKg:
+                                      (f.loadKg ?? 25) + (ex?.loadStepKg ?? 2.5),
+                                  }
                                 : f
                             ),
                           })

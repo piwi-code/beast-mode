@@ -41,7 +41,7 @@ Structured for 2, 3, or 4 sessions/week (`UPPER` $\leftrightarrow$ `LOWER`):
   - **Optional Superset 3 / 4**: Cable Lateral Raises + Tricep Rope Pushdowns or Postural Back work.
   - **Finisher**: High-Pulley Long-Rope Face Pulls for external rotation and postural reset.
 - **Lower Day (`LOWER`)**:
-  - **Primary**: Barbell Back Squat on buddy sessions, Dumbbell Bulgarian Split Squat on solo sessions; the squat pattern flip-flops with Deadlift on consecutive Lower sessions.
+  - **Primary**: Barbell Back Squat on buddy sessions, Leg Press on solo sessions; the squat pattern flip-flops with Deadlift on consecutive Lower sessions.
   - **Superset 1**: Seated Machine Hamstring Curls paired with Standing Deficit Machine Calf Raises (spares the spine after squats).
   - **Superset 2**: Neutral-Grip Lat Pulldown paired with Captain's Chair Knee Raises (decompresses the lumbar spine after heavy axial load).
   - **Finisher**: Turf Sled "Down & Back" rounds (with a buddy: Buddy A pushes/pulls while Buddy B times/rests).
@@ -50,7 +50,7 @@ Structured for 2, 3, or 4 sessions/week (`UPPER` $\leftrightarrow$ `LOWER`):
 Buddy availability is **not** a split type. It is a per-session flag (`WorkoutSession.withBuddy`) that applies to every split, PPL included:
 - **Buddy days** (`PlanConfig.buddyDays`, set in Settings as weekdays): new sessions planned on these days start with `withBuddy: true`; all other days start solo. Any session can be ticked Buddy/Solo individually in the Plan and Current Session views.
 - **Buddy session** = a spotter is present. Spotter-dependent lifts (any barbell bench press and the barbell back squat, flagged `needsSpotter` on the exercise) are allowed and recommended, and partner-friendly superset stations (`buddyFriendly`) are ranked higher.
-- **Solo session** = no spotter. Auto-selection never picks a `needsSpotter` lift; it uses the exercise's `soloAlternativeId` instead (Barbell Bench $\rightarrow$ Dumbbell Bench, Back Squat $\rightarrow$ Dumbbell Bulgarian Split Squat). Superset defaults favour self-contained single-station pairs.
+- **Solo session** = no spotter. Auto-selection never picks a `needsSpotter` lift; it uses the exercise's `soloAlternativeId` instead (Barbell Bench $\rightarrow$ Dumbbell Bench, Back Squat $\rightarrow$ Leg Press). Superset defaults favour self-contained single-station pairs.
 - **Switching a session to Solo** swaps spotter-dependent lifts for their solo alternatives. Switching to Buddy leaves exercises unchanged.
 - **Safety warning (Rule 0 below)**: manually choosing a `needsSpotter` lift on a solo session is allowed but flagged.
 
@@ -107,6 +107,16 @@ The application executes dynamic validation checks in real time as exercises, su
   - **Optimal Weekly Band**: 6–14 working sets per primary muscle group (scaled to 2, 3, or 4 sessions/week).
   - **Overtraining Ceiling**: $> 16$ sets/week (or $> 30$ sets/fortnight) in a single muscle region triggers an **Over-Concentration Warning** and deprioritizes supersets targeting that muscle.
   - **Under-Stimulated Floor**: Muscle regions with $< 4$ sets/week are highlighted as **Recommended Focus Areas** when selecting the next superset.
+
+---
+
+## 3b. Weight Suggestions (`src/domain/engine/loads.ts`)
+
+- **Last recorded first**: when an exercise is added to a session (new session, new superset, exercise swap, split switch), its sets start from the weights and reps logged the last time that exercise was completed, whether as a primary lift or in a superset. Finishers reuse their last finisher load.
+- **Otherwise an estimate**: the exercise's `startingLoadKg`, or a rough default for its equipment type. This is a starting guess; it is not derived from other lifts.
+- **Never overwrites your edits**: only slots whose exercise changed are re-loaded, and sets already ticked off are left alone.
+- **Drop sets**: finishers with `dropSetDrops` show the weights to use, heaviest first. Each drop is about 20% of the start weight, rounded to the exercise's `loadStepKg` (5 kg for fixed barbells) and at least one jump: 30 → 25 → 20, 40 → 30 → 20.
+- **Solo squat days** default to the plate-loaded Leg Press (Back Squat's `soloAlternativeId`); Bulgarian Split Squat remains an alternative.
 
 ---
 
