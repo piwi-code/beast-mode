@@ -44,6 +44,7 @@ When the POC phase ends: enable branch protection on `main` (require PR + passin
 - [x] Drop-set pump finishers (Barbell Curl, Cable Pushdown) with per-exercise finisher protocol/load; 10 more exercises and 6 more curated supersets; catalog integrity tests
 - [x] Weights start from the last recorded load per exercise (estimate otherwise); drop-set bar suggestions in 5 kg jumps; Leg Press as the solo squat default; EZ-Bar Curl, Preacher Curl, Seated Calf Raise, Dips + 3 supersets
 - [x] Weight suggestions ease back after a 3+ week break and step up when every set hit the top of the rep range, with an on-screen explanation
+- [x] Share a completed workout as an image (phone share sheet for WhatsApp/Messenger, download on desktop)
 - [ ] Built-in auto-starting rest timer (60–90s for supersets/sleds, 2–3m for heavy primary anchors) with Web Audio/Vibration alerts
 - [ ] Shareable Workout Template URLs (encode a planned session into a URL query string so you can text a link to your gym buddy)
 - [ ] Custom Exercise & Custom Superset creator in the UI

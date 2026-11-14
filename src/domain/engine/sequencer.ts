@@ -356,7 +356,6 @@ export function buildDraftSessionFromSuggestion(
     setNumber: idx + 1,
     weightKg: defaultPrimaryWeight,
     reps: 6,
-    rpe: 8,
     completed: false,
   }));
 

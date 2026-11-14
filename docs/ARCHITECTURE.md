@@ -22,6 +22,7 @@ beast-mode/
 │   │   ├── engine/          # Pure business logic:
 │   │   │   ├── sequencer.ts         # Next session & primary lift recommendation engine
 │   │   │   ├── loads.ts             # Weight suggestions (last recorded / estimate) & drop-set weights
+│   │   │   ├── sessionSummary.ts    # Shareable per-exercise summary of a workout (top weight, sets)
 │   │   │   ├── splits.ts            # Split labels, buddy-day & spotter-safety helpers, legacy data migration
 │   │   │   ├── rulesEngine.ts       # Axial load, antagonist pairing, intra-session overlap, 48h lookback
 │   │   │   ├── volumeTracker.ts     # 7-day & 14-day muscle volume balance & superset recommender
@@ -42,6 +43,7 @@ beast-mode/
 │       │   ├── BottomSheet.tsx          # Shared sheet chrome used by SelectSheet & MultiSelectFilter
 │       │   ├── BuddyToggle.tsx          # Per-session Buddy/Solo switch + small buddy badge
 │       │   └── ScrollCarousel.tsx       # STANDARD horizontal strip: swipe + snap, hidden scrollbar, edge arrows
+│       ├── share/           # sessionShareImage.ts: draws the summary as a PNG and opens the share sheet
 │       ├── views/           # 5 Core Pages:
 │       │   ├── PlanView.tsx             # 14-day calendar, lightweight session planning, 4-color health & Quick Switch, Current vs Future loading
 │       │   ├── CurrentSessionView.tsx   # Active gym floor session tracker (weights, reps, 2/3 set toggles, pivot split, complete/abandon)

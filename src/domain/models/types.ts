@@ -169,6 +169,8 @@ export type SessionLifecycleStatus = 'PLANNED' | 'ACTIVE' | 'COMPLETED';
 export interface WorkoutSession {
   id: string;
   date: string; // ISO string (YYYY-MM-DD or full ISO)
+  /** When the session was actually started (set on activation). */
+  startedAt?: string;
   splitType: SessionSplitType;
   /** A buddy/spotter is training with you this session (enables spotted lifts, shared stations). */
   withBuddy?: boolean;

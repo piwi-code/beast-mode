@@ -22,6 +22,8 @@ A local-first Progressive Web Application (PWA) for planning modular gym session
   4. **7-Day & 14-Day Muscle Volume Balance**: Tracks working sets across weekly and fortnightly windows so supersets are allocated evenly without overtraining.
 - **Touch-Friendly Exercise Picker**:
   - Search by name, muscle or equipment, filter by equipment, and browse by muscle-group sub-headings (supersets appear under both muscle groups). Every option shows a plain-language name, a one-line description, and labels such as equipment, main lift, and spine load.
+- **Share a Workout**:
+  - From History, share a completed session as a clean image (date started, top weight and sets per exercise) via your phone's share sheet.
 - **Main Lift Progression Tracker**:
   - Logs sets, reps, weight (kg), and RPE for primary lifts and accessories, with automatic **Estimated 1RM (Epley)** calculation and historical charts.
 - **Clean, Backend-Ready Architecture**:

@@ -4,11 +4,14 @@ import {
   CheckCircle2,
   Dumbbell,
   FileText,
+  Share2,
   TrendingUp,
 } from 'lucide-react';
 import { Exercise, WorkoutSession } from '../../domain/models/types';
 import { extractCategoryLiftHistory } from '../../domain/engine/oneRepMax';
 import { SPLIT_LABELS, SPLIT_SHORT_LABELS } from '../../domain/engine/sequencer';
+import { buildSessionSummary } from '../../domain/engine/sessionSummary';
+import { shareSessionImage } from '../share/sessionShareImage';
 
 interface HistoryViewProps {
   exercises: Exercise[];
@@ -29,6 +32,8 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
     sortedCompleted[0]?.id ?? null
   );
   const [notesSavedToast, setNotesSavedToast] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
 
   const exerciseMap = new Map(exercises.map((e) => [e.id, e]));
   const selectedSession = sortedCompleted.find(
@@ -294,9 +299,35 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                 {SPLIT_LABELS[selectedSession.splitType]}
               </h3>
             </div>
-            <span className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs text-zinc-400">
-              Read-Only Record (Notes Editable)
-            </span>
+            <div className="flex flex-col items-end gap-1">
+              <button
+                type="button"
+                disabled={sharing}
+                onClick={async () => {
+                  setSharing(true);
+                  setShareMessage(null);
+                  try {
+                    const outcome = await shareSessionImage(
+                      buildSessionSummary(selectedSession, exerciseMap)
+                    );
+                    if (outcome === 'downloaded') {
+                      setShareMessage('Image saved to your downloads.');
+                    }
+                  } catch {
+                    setShareMessage('Could not create the image.');
+                  } finally {
+                    setSharing(false);
+                  }
+                }}
+                className="inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-extrabold text-zinc-950 transition hover:bg-emerald-400 active:scale-95 disabled:opacity-60"
+              >
+                <Share2 className="h-4 w-4" />
+                {sharing ? 'Preparing…' : 'Share'}
+              </button>
+              {shareMessage && (
+                <span className="text-[11px] text-zinc-400">{shareMessage}</span>
+              )}
+            </div>
           </div>
 
           {/* Primary Lift Recorded Sets */}
@@ -312,7 +343,13 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                   className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1 text-xs text-zinc-200"
                 >
                   Set {s.setNumber}: <strong>{s.weightKg} kg × {s.reps} reps</strong>
-                  {s.rpe ? ` @ RPE ${s.rpe}` : ''}
+                  {s.rpe ? (
+                    <span title="RPE = Rate of Perceived Exertion: how hard the set felt out of 10. RPE 8 means about 2 reps left in the tank.">
+                      {` @ RPE ${s.rpe}`}
+                    </span>
+                  ) : (
+                    ''
+                  )}
                 </span>
               ))}
             </div>

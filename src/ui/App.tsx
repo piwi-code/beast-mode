@@ -100,6 +100,7 @@ export const App: React.FC = () => {
       ...session,
       status: 'ACTIVE',
       date: new Date().toISOString(),
+      startedAt: session.startedAt ?? new Date().toISOString(),
     };
     await repo.saveSession(
       hasLoggedWork(session)
@@ -135,7 +136,7 @@ export const App: React.FC = () => {
     await repo.saveSession(
       applySuggestedLoads(
         undefined,
-        activeDraft,
+        { ...activeDraft, startedAt: new Date().toISOString() },
         sessions,
         new Map(exercises.map((e) => [e.id, e]))
       )
