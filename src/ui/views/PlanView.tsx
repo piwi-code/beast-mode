@@ -194,7 +194,8 @@ export const PlanView: React.FC<PlanViewProps> = ({
       Math.max(1, setCount),
       completedSessions,
       exerciseMap,
-      new Date(sessionDate)
+      new Date(sessionDate),
+      plan.startingWeights
     );
     const top = suggestion.sets.reduce((a, b) => (b.weightKg > a.weightKg ? b : a));
     const adj = suggestion.adjustment;
@@ -202,7 +203,7 @@ export const PlanView: React.FC<PlanViewProps> = ({
       ? adj.note
       : suggestion.source === 'history'
         ? 'Same as last time.'
-        : 'Starting estimate: no history for this exercise yet.';
+        : (suggestion.basis ?? 'Starting estimate: no history for this exercise yet.');
     return (
       <div className="mt-1.5 rounded-lg border border-zinc-800 bg-zinc-950/60 px-2.5 py-1.5 text-[11px] leading-snug text-zinc-400">
         <div className="flex items-center gap-1.5">

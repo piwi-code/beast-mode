@@ -46,6 +46,7 @@ When the POC phase ends: enable branch protection on `main` (require PR + passin
 - [x] Weight suggestions ease back after a 3+ week break and step up when every set hit the top of the rep range, with an on-screen explanation
 - [x] Share a completed workout as an image (phone share sheet for WhatsApp/Messenger, download on desktop)
 - [x] Delete a completed session from History (with confirmation); dumbbell weights logged per dumbbell with ×2 totals
+- [x] Starting weights: Settings entry for main lifts and ratio-based predictions for related exercises; set/round/session timestamps recorded; sample sessions no longer seeded (leftovers removed)
 - [ ] Built-in auto-starting rest timer (60–90s for supersets/sleds, 2–3m for heavy primary anchors) with Web Audio/Vibration alerts
 - [ ] Shareable Workout Template URLs (encode a planned session into a URL query string so you can text a link to your gym buddy)
 - [ ] Custom Exercise & Custom Superset creator in the UI

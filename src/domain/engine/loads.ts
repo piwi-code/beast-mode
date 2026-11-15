@@ -24,6 +24,8 @@ export interface LoadAdjustment {
 
 export interface SuggestedLoad {
   source: 'history' | 'estimate';
+  /** For estimates: where the number came from, in plain language. */
+  basis?: string;
   sets: Array<{ weightKg: number; reps: number }>;
   /** Present when the last recorded weight was changed (break reduction or progression). */
   adjustment?: LoadAdjustment;
@@ -88,6 +90,114 @@ export function estimateStartingLoad(ex: Exercise | undefined): number {
   }
 }
 
+/** Main lifts whose starting weight can be set in Settings. */
+export const MAIN_LIFT_IDS = [
+  'bb_flat_bench',
+  'bb_back_squat',
+  'bb_deadlift',
+  'bb_ohp',
+  'leg_press_machine',
+];
+
+/** User-entered starting weights by exercise id (PlanConfig.startingWeights). */
+export type StartingWeights = Record<string, number>;
+
+/**
+ * Rule-of-thumb strength ratios between related exercises: `b ≈ a × ratio`
+ * for a similar rep range (per dumbbell where two are used). Deliberately a
+ * little conservative; they only seed the first session of a new exercise.
+ * Each pair works in both directions.
+ */
+export const LIFT_RATIOS: Array<{ a: string; b: string; ratio: number }> = [
+  // From Bench Press
+  { a: 'bb_flat_bench', b: 'db_flat_bench', ratio: 0.35 },
+  { a: 'bb_flat_bench', b: 'db_incline_press', ratio: 0.3 },
+  { a: 'bb_flat_bench', b: 'bb_ohp', ratio: 0.6 },
+  { a: 'bb_flat_bench', b: 'db_shoulder_press_seated', ratio: 0.22 },
+  { a: 'bb_flat_bench', b: 'machine_chest_press', ratio: 0.8 },
+  { a: 'bb_flat_bench', b: 'ez_skull_crusher', ratio: 0.3 },
+  { a: 'bb_flat_bench', b: 'bb_pendlay_row', ratio: 0.8 },
+  // From Back Squat
+  { a: 'bb_back_squat', b: 'leg_press_machine', ratio: 1.5 },
+  { a: 'bb_back_squat', b: 'db_bulgarian_split_squat', ratio: 0.15 },
+  { a: 'bb_back_squat', b: 'db_walking_lunges', ratio: 0.15 },
+  { a: 'bb_back_squat', b: 'db_goblet_squat', ratio: 0.3 },
+  { a: 'bb_back_squat', b: 'leg_extension_machine', ratio: 0.4 },
+  { a: 'bb_back_squat', b: 'bb_deadlift', ratio: 1.15 },
+  // From Deadlift
+  { a: 'bb_deadlift', b: 'bb_rdl', ratio: 0.7 },
+  { a: 'bb_deadlift', b: 'bb_hip_thrust', ratio: 0.7 },
+  // Arms, back, calves
+  { a: 'ez_bar_curl', b: 'ez_preacher_curl', ratio: 0.8 },
+  { a: 'ez_bar_curl', b: 'db_hammer_curls', ratio: 0.4 },
+  { a: 'ez_bar_curl', b: 'seated_isolated_curl', ratio: 0.35 },
+  { a: 'lat_pulldown_neutral', b: 'cable_seated_row', ratio: 1 },
+  { a: 'machine_calf_raise_standing', b: 'seated_calf_raise_machine', ratio: 0.5 },
+];
+
+/** A weight we trust for an exercise: last logged top set, else the user's starting weight. */
+function knownWorkingWeight(
+  exerciseId: string,
+  history: WorkoutSession[],
+  startingWeights: StartingWeights
+): { kg: number; from: 'history' | 'settings' } | undefined {
+  const last = getLastLogged(exerciseId, history);
+  if (last) {
+    const kg = Math.max(...last.sets.map((x) => x.weightKg));
+    if (kg > 0) return { kg, from: 'history' };
+  }
+  const set = startingWeights[exerciseId];
+  return set && set > 0 ? { kg: set, from: 'settings' } : undefined;
+}
+
+/**
+ * Starting weight for an exercise with no history, in order of trust:
+ *  1. the user's own starting weight (Settings),
+ *  2. a prediction from a related lift they have logged (or set),
+ *  3. the catalog's rough default for the exercise or its equipment type.
+ */
+export function predictStartingLoad(
+  ex: Exercise | undefined,
+  history: WorkoutSession[],
+  exerciseMap: Map<string, Exercise>,
+  startingWeights: StartingWeights = {}
+): { kg: number; basis: string } {
+  const step = ex?.loadStepKg ?? DEFAULT_STEP_KG;
+  if (ex) {
+    const own = startingWeights[ex.id];
+    if (own && own > 0) {
+      return { kg: roundToStep(own, step), basis: 'Your starting weight from Settings.' };
+    }
+
+    const candidates: Array<{ kg: number; from: 'history' | 'settings'; name: string; anchorKg: number }> = [];
+    for (const r of LIFT_RATIOS) {
+      const otherId = r.a === ex.id ? r.b : r.b === ex.id ? r.a : undefined;
+      if (!otherId) continue;
+      const known = knownWorkingWeight(otherId, history, startingWeights);
+      if (!known) continue;
+      const other = exerciseMap.get(otherId);
+      candidates.push({
+        kg: r.b === ex.id ? known.kg * r.ratio : known.kg / r.ratio,
+        from: known.from,
+        name: other?.shortName ?? other?.name ?? otherId,
+        anchorKg: known.kg,
+      });
+    }
+    // Prefer lifts actually logged over numbers typed into Settings
+    const best = candidates.find((c) => c.from === 'history') ?? candidates[0];
+    if (best) {
+      return {
+        kg: Math.max(step, roundToStep(best.kg, step)),
+        basis: `Predicted from your ${best.name} (${best.anchorKg} kg). Adjust on the day.`,
+      };
+    }
+  }
+  return {
+    kg: roundToStep(estimateStartingLoad(ex), step),
+    basis: 'Starting estimate: no history for this exercise yet.',
+  };
+}
+
 function defaultReps(ex: Exercise | undefined): number {
   const m = ex?.defaultReps?.match(/\d+/);
   return m ? Number(m[0]) : 10;
@@ -147,17 +257,20 @@ export function suggestLoad(
   setCount: number,
   history: WorkoutSession[],
   exerciseMap: Map<string, Exercise>,
-  referenceDate: Date = new Date()
+  referenceDate: Date = new Date(),
+  startingWeights: StartingWeights = {}
 ): SuggestedLoad {
   const ex = exerciseMap.get(exerciseId);
   const step = ex?.loadStepKg ?? DEFAULT_STEP_KG;
   const last = getLastLogged(exerciseId, history);
 
   if (!last) {
-    const weightKg = roundToStep(estimateStartingLoad(ex), step);
+    const predicted = predictStartingLoad(ex, history, exerciseMap, startingWeights);
+    const weightKg = predicted.kg;
     const reps = defaultReps(ex);
     return {
       source: 'estimate',
+      basis: predicted.basis,
       sets: Array.from({ length: setCount }, () => ({ weightKg, reps })),
     };
   }
@@ -258,14 +371,16 @@ function reload(
   exerciseId: string,
   history: WorkoutSession[],
   exerciseMap: Map<string, Exercise>,
-  referenceDate: Date
+  referenceDate: Date,
+  startingWeights: StartingWeights
 ): LoggedSet[] {
   const suggestion = suggestLoad(
     exerciseId,
     sets.length,
     history,
     exerciseMap,
-    referenceDate
+    referenceDate,
+    startingWeights
   );
   return sets.map((set, i) =>
     set.completed ? set : { ...set, ...suggestion.sets[i] }
@@ -282,7 +397,8 @@ export function applySuggestedLoads(
   previous: WorkoutSession | undefined,
   next: WorkoutSession,
   history: WorkoutSession[],
-  exerciseMap: Map<string, Exercise>
+  exerciseMap: Map<string, Exercise>,
+  startingWeights: StartingWeights = {}
 ): WorkoutSession {
   const prevBlocks = new Map((previous?.supersets ?? []).map((b) => [b.id, b]));
   const prevFins = new Map((previous?.finishers ?? []).map((f) => [f.id, f]));
@@ -293,7 +409,7 @@ export function applySuggestedLoads(
   return {
     ...next,
     primaryLiftSets: primaryChanged
-      ? reload(next.primaryLiftSets, next.primaryLiftId, history, exerciseMap, refDate)
+      ? reload(next.primaryLiftSets, next.primaryLiftId, history, exerciseMap, refDate, startingWeights)
       : next.primaryLiftSets,
     supersets: next.supersets.map((b) => {
       const prev = prevBlocks.get(b.id);
@@ -302,11 +418,11 @@ export function applySuggestedLoads(
         setsA:
           prev?.exerciseAId === b.exerciseAId
             ? b.setsA
-            : reload(b.setsA, b.exerciseAId, history, exerciseMap, refDate),
+            : reload(b.setsA, b.exerciseAId, history, exerciseMap, refDate, startingWeights),
         setsB:
           prev?.exerciseBId === b.exerciseBId
             ? b.setsB
-            : reload(b.setsB, b.exerciseBId, history, exerciseMap, refDate),
+            : reload(b.setsB, b.exerciseBId, history, exerciseMap, refDate, startingWeights),
       };
     }),
     finishers: next.finishers.map((f): SessionFinisherBlock => {
@@ -347,4 +463,18 @@ export function hasLoggedWork(session: WorkoutSession): boolean {
     ) ||
     session.finishers.some((f) => f.completedRounds > 0)
   );
+}
+
+/**
+ * Sets a finisher's completed-round count and keeps one timestamp per
+ * completed round (new rounds are stamped now; removed rounds are dropped).
+ */
+export function stampFinisherRounds(
+  fin: SessionFinisherBlock,
+  completedRounds: number,
+  now: Date = new Date()
+): Pick<SessionFinisherBlock, 'completedRounds' | 'roundCompletedAt'> {
+  const stamps = (fin.roundCompletedAt ?? []).slice(0, completedRounds);
+  while (stamps.length < completedRounds) stamps.push(now.toISOString());
+  return { completedRounds, roundCompletedAt: stamps };
 }

@@ -121,6 +121,11 @@ export interface PlanConfig {
   targetFinishersPerSession: 1 | 2;
   weeklySetCeilingOverride?: number;
   equipmentPreferences?: Record<EquipmentCategory, EquipmentPreferenceWeight>;
+  /**
+   * User-entered starting weights (kg) by exercise id, used until that
+   * exercise has been logged, and as anchors for predicting related lifts.
+   */
+  startingWeights?: Record<string, number>;
   updatedAt: string;
 }
 
@@ -146,6 +151,8 @@ export interface LoggedSet {
   reps: number;
   rpe?: number;
   completed: boolean;
+  /** When the set was ticked off (ISO). Not shown yet; kept for later session analysis. */
+  completedAt?: string;
 }
 
 export interface SessionSupersetBlock {
@@ -167,6 +174,8 @@ export interface SessionFinisherBlock {
   protocolNote: string;
   loadKg?: number;
   completedRounds: number;
+  /** When each completed round was ticked off (ISO), in order. */
+  roundCompletedAt?: string[];
 }
 
 export type SessionLifecycleStatus = 'PLANNED' | 'ACTIVE' | 'COMPLETED';
@@ -176,6 +185,8 @@ export interface WorkoutSession {
   date: string; // ISO string (YYYY-MM-DD or full ISO)
   /** When the session was actually started (set on activation). */
   startedAt?: string;
+  /** When the session was marked complete. */
+  completedAt?: string;
   splitType: SessionSplitType;
   /** A buddy/spotter is training with you this session (enables spotted lifts, shared stations). */
   withBuddy?: boolean;

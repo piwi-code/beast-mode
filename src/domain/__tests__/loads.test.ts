@@ -9,7 +9,10 @@ import {
   applySuggestedLoads,
   getBreakReductionPct,
   getDropSetWeights,
+  LIFT_RATIOS,
   parseRepRange,
+  predictStartingLoad,
+  stampFinisherRounds,
   suggestFinisherLoad,
   suggestLoad,
 } from '../engine/loads';
@@ -170,5 +173,76 @@ describe('drop set suggestions', () => {
     expect(getDropSetWeights(25, 5)).toEqual([25, 20, 15]);
     expect(getDropSetWeights(10, 5)).toEqual([10, 5]);
     expect(getDropSetWeights(25, 2.5)).toEqual([25, 20, 15]);
+  });
+});
+
+describe('starting weight predictions', () => {
+  const benchDone: WorkoutSession = {
+    ...draft('UPPER', 'bench-done', '2026-11-10T09:00:00'),
+    status: 'COMPLETED',
+    primaryLiftSets: [{ setNumber: 1, weightKg: 80, reps: 6, completed: true }],
+    supersets: [],
+    finishers: [],
+  };
+  const on = new Date('2026-11-14T09:00:00');
+
+  it('predicts a related lift from one you have logged', () => {
+    const s = suggestLoad('db_flat_bench', 3, [benchDone], exMap, on);
+    expect(s.source).toBe('estimate');
+    expect(s.sets[0].weightKg).toBe(27.5); // 80 * 0.35 = 28 -> 27.5 per dumbbell
+    expect(s.basis).toMatch(/Predicted from your Bench Press \(80 kg\)/);
+  });
+
+  it('works in reverse (squat from leg press)', () => {
+    const legPress: WorkoutSession = {
+      ...benchDone,
+      id: 'lp',
+      primaryLiftId: 'leg_press_machine',
+      primaryLiftSets: [{ setNumber: 1, weightKg: 150, reps: 10, completed: true }],
+    };
+    expect(predictStartingLoad(exMap.get('bb_back_squat'), [legPress], exMap).kg).toBe(100);
+  });
+
+  it('uses your Settings starting weight first, and as an anchor for related lifts', () => {
+    const sw = { bb_back_squat: 90 };
+    expect(suggestLoad('bb_back_squat', 4, [], exMap, on, sw).sets[0].weightKg).toBe(90);
+    expect(suggestLoad('bb_back_squat', 4, [], exMap, on, sw).basis).toMatch(/Settings/);
+    expect(suggestLoad('leg_press_machine', 4, [], exMap, on, sw).sets[0].weightKg).toBe(135);
+    // logged lifts beat numbers typed into Settings as the anchor
+    expect(
+      suggestLoad('bb_ohp', 4, [benchDone], exMap, on, { bb_flat_bench: 100 }).sets[0].weightKg
+    ).toBe(47.5); // 80 * 0.6 = 48 -> 47.5
+  });
+
+  it('history still wins over a Settings starting weight', () => {
+    const s = suggestLoad('bb_flat_bench', 1, [benchDone], exMap, on, { bb_flat_bench: 120 });
+    expect(s.source).toBe('history');
+    expect(s.sets[0].weightKg).toBe(80);
+  });
+
+  it('falls back to the catalog default when nothing related is known', () => {
+    const s = suggestLoad('leg_press_machine', 4, [], exMap, on);
+    expect(s.sets[0].weightKg).toBe(100);
+    expect(s.basis).toMatch(/no history/);
+  });
+
+  it('every ratio refers to real exercises', () => {
+    for (const r of LIFT_RATIOS) {
+      expect(exMap.has(r.a), r.a).toBe(true);
+      expect(exMap.has(r.b), r.b).toBe(true);
+    }
+  });
+});
+
+describe('timestamps', () => {
+  it('keeps one timestamp per completed finisher round', () => {
+    const fin = { id: 'f', exerciseId: 'rope_face_pull', rounds: 3, protocolNote: '', completedRounds: 0 };
+    const t1 = new Date('2026-11-14T10:00:00Z');
+    const t2 = new Date('2026-11-14T10:02:00Z');
+    const one = { ...fin, ...stampFinisherRounds(fin, 1, t1) };
+    const two = { ...one, ...stampFinisherRounds(one, 2, t2) };
+    expect(two.roundCompletedAt).toEqual([t1.toISOString(), t2.toISOString()]);
+    const back = { ...two, ...stampFinisherRounds(two, 1) };
+    expect(back.roundCompletedAt).toEqual([t1.toISOString()]);
   });
 });

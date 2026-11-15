@@ -11,8 +11,10 @@ import {
 import {
   EquipmentCategory,
   EquipmentPreferenceWeight,
+  Exercise,
   PlanConfig,
   PlanScheduleFamily,
+  WorkoutSession,
   SessionsPerWeek,
   Weekday,
 } from '../../domain/models/types';
@@ -20,10 +22,17 @@ import {
   WEEKDAYS_MON_FIRST,
   WEEKDAY_SHORT_LABELS,
 } from '../../domain/engine/splits';
+import {
+  MAIN_LIFT_IDS,
+  getLastLogged,
+  predictStartingLoad,
+} from '../../domain/engine/loads';
 import { AppDataSnapshot } from '../../data/interfaces/repositories';
 
 interface SettingsViewProps {
   plan: PlanConfig;
+  exercises: Exercise[];
+  completedSessions: WorkoutSession[];
   onSavePlan: (updated: PlanConfig) => Promise<void>;
   onExportData: () => Promise<AppDataSnapshot>;
   onImportData: (snapshot: AppDataSnapshot) => Promise<void>;
@@ -40,6 +49,8 @@ const EQUIPMENT_LABELS: Record<EquipmentCategory, string> = {
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   plan,
+  exercises,
+  completedSessions,
   onSavePlan,
   onExportData,
   onImportData,
@@ -75,6 +86,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             .map((d) => WEEKDAY_SHORT_LABELS[d])
             .join(', ')}`
         : 'No buddy days — sessions default to solo (spotter-free lifts)'
+    );
+  };
+
+  const exerciseMap = new Map(exercises.map((e) => [e.id, e]));
+  const startingWeights = plan.startingWeights ?? {};
+  const handleStartingWeightChange = async (exerciseId: string, raw: string) => {
+    const next = { ...startingWeights };
+    const kg = Number(raw);
+    if (raw.trim() === '' || !Number.isFinite(kg) || kg <= 0) delete next[exerciseId];
+    else next[exerciseId] = kg;
+    await onSavePlan({ ...plan, startingWeights: next });
+    setStatusMessage(
+      next[exerciseId]
+        ? `Starting weight saved: ${exerciseMap.get(exerciseId)?.shortName} ${next[exerciseId]} kg`
+        : `Starting weight cleared for ${exerciseMap.get(exerciseId)?.shortName}`
     );
   };
 
@@ -236,6 +262,66 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <span className="text-[10px] font-semibold text-zinc-600">Solo</span>
                   )}
                 </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Starting weights for main lifts */}
+        <div className="space-y-2">
+          <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            Starting Weights (Main Lifts)
+          </label>
+          <p className="text-xs text-zinc-400">
+            Optional. Enter what you would use for a normal working set. It is used the
+            first time you do the lift, and to predict starting weights for related
+            exercises (e.g. Dumbbell Bench from Bench Press). Once you have logged a
+            lift, your own numbers take over.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {MAIN_LIFT_IDS.map((id) => {
+              const ex = exerciseMap.get(id);
+              if (!ex) return null;
+              const last = getLastLogged(id, completedSessions);
+              const lastKg = last ? Math.max(...last.sets.map((x) => x.weightKg)) : undefined;
+              // What the app would use with no entry here
+              const fallback = predictStartingLoad(ex, completedSessions, exerciseMap, {
+                ...startingWeights,
+                [id]: 0,
+              });
+              return (
+                <div
+                  key={id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-950 p-3"
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold text-white">{ex.shortName ?? ex.name}</div>
+                    <div className="text-[11px] text-zinc-500">
+                      {lastKg !== undefined
+                        ? `Logged: ${lastKg} kg last time (this now takes over)`
+                        : `If left blank: ${fallback.kg} kg`}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <input
+                      key={`${id}-${startingWeights[id] ?? ''}`}
+                      type="number"
+                      inputMode="decimal"
+                      step="2.5"
+                      min="0"
+                      defaultValue={startingWeights[id] ?? ''}
+                      placeholder={String(fallback.kg)}
+                      aria-label={`${ex.shortName ?? ex.name} starting weight in kg`}
+                      onBlur={(e) => {
+                        if (e.target.value !== String(startingWeights[id] ?? '')) {
+                          handleStartingWeightChange(id, e.target.value);
+                        }
+                      }}
+                      className="h-11 w-20 rounded-xl border border-zinc-700 bg-zinc-900 px-2 text-center text-sm font-extrabold text-white placeholder:font-semibold placeholder:text-zinc-600 focus:border-emerald-500 focus:outline-none"
+                    />
+                    <span className="text-xs text-zinc-500">kg</span>
+                  </div>
+                </div>
               );
             })}
           </div>

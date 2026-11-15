@@ -45,7 +45,7 @@ export const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const reloadAll = async () => {
-    await repo.seedDemoHistoryIfEmpty();
+    await repo.removeDemoData();
     const [loadedPlan, loadedEx, loadedSS, loadedSessions] = await Promise.all([
       repo.getPlanConfig(),
       repo.getExercises(),
@@ -74,7 +74,8 @@ export const App: React.FC = () => {
       sessions.find((s) => s.id === session.id),
       session,
       sessions,
-      exerciseMap
+      exerciseMap,
+      plan.startingWeights
     );
     const withAxial: WorkoutSession = {
       ...withLoads,
@@ -109,7 +110,8 @@ export const App: React.FC = () => {
             undefined,
             started,
             sessions,
-            new Map(exercises.map((e) => [e.id, e]))
+            new Map(exercises.map((e) => [e.id, e])),
+            plan.startingWeights
           )
     );
     setSessions(await repo.getSessions());
@@ -138,7 +140,8 @@ export const App: React.FC = () => {
         undefined,
         { ...activeDraft, startedAt: new Date().toISOString() },
         sessions,
-        new Map(exercises.map((e) => [e.id, e]))
+        new Map(exercises.map((e) => [e.id, e])),
+        plan.startingWeights
       )
     );
     setSessions(await repo.getSessions());
@@ -151,6 +154,7 @@ export const App: React.FC = () => {
       ...session,
       status: 'COMPLETED',
       date: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
       totalAxialLoad: calculateSessionAxialLoad(session, exerciseMap),
       primaryLiftSets: session.primaryLiftSets.map((s) => ({
         ...s,
@@ -331,6 +335,8 @@ export const App: React.FC = () => {
         {activePage === 'SETTINGS' && (
           <SettingsView
             plan={plan}
+            exercises={exercises}
+            completedSessions={completedSessions}
             onSavePlan={handleSavePlan}
             onExportData={() => repo.exportSnapshot()}
             onImportData={handleImportData}

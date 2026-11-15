@@ -24,5 +24,6 @@ export interface IWorkoutRepository {
   deleteSession(sessionId: string): Promise<void>;
   exportSnapshot(): Promise<AppDataSnapshot>;
   importSnapshot(snapshot: AppDataSnapshot): Promise<void>;
-  seedDemoHistoryIfEmpty(): Promise<void>;
+  /** Removes sample sessions created by earlier versions; returns how many. */
+  removeDemoData(): Promise<number>;
 }

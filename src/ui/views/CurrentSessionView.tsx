@@ -61,7 +61,11 @@ import {
   setSessionBuddy,
 } from '../../domain/engine/splits';
 import { estimateOneRepMax } from '../../domain/engine/oneRepMax';
-import { getDropSetWeights, suggestLoad } from '../../domain/engine/loads';
+import {
+  getDropSetWeights,
+  stampFinisherRounds,
+  suggestLoad,
+} from '../../domain/engine/loads';
 
 interface CurrentSessionViewProps {
   plan: PlanConfig;
@@ -412,7 +416,13 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
         {/* Set number doubles as the big tap-to-complete button */}
         <button
           type="button"
-          onClick={() => onChange({ completed: !set.completed })}
+          onClick={() =>
+            onChange({
+              completed: !set.completed,
+              // timestamp kept for later session analysis (rest times, duration)
+              completedAt: set.completed ? undefined : new Date().toISOString(),
+            })
+          }
           aria-pressed={set.completed}
           aria-label={`Set ${set.setNumber} ${set.completed ? 'done' : 'not done'}`}
           style={{ gridArea: 'done' }}
@@ -462,7 +472,8 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
       sets.length,
       completedSessions,
       exerciseMap,
-      new Date(activeSession.date)
+      new Date(activeSession.date),
+      plan.startingWeights
     );
     const adj = suggestion.adjustment;
     if (!adj) return null;
@@ -1296,8 +1307,10 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                                 f.id === fin.id
                                   ? {
                                       ...f,
-                                      completedRounds:
-                                        f.completedRounds === r ? r - 1 : r,
+                                      ...stampFinisherRounds(
+                                        f,
+                                        f.completedRounds === r ? r - 1 : r
+                                      ),
                                     }
                                   : f
                               ),
