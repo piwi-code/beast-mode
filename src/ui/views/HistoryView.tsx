@@ -5,6 +5,7 @@ import {
   Dumbbell,
   FileText,
   Share2,
+  Trash2,
   TrendingUp,
 } from 'lucide-react';
 import { Exercise, WorkoutSession } from '../../domain/models/types';
@@ -12,17 +13,21 @@ import { extractCategoryLiftHistory } from '../../domain/engine/oneRepMax';
 import { SPLIT_LABELS, SPLIT_SHORT_LABELS } from '../../domain/engine/sequencer';
 import { buildSessionSummary } from '../../domain/engine/sessionSummary';
 import { shareSessionImage } from '../share/sessionShareImage';
+import { formatLoad } from '../../domain/engine/loadFormat';
+import { BottomSheet } from '../components/BottomSheet';
 
 interface HistoryViewProps {
   exercises: Exercise[];
   completedSessions: WorkoutSession[];
   onUpdateSessionNotes: (sessionId: string, notes: string) => Promise<void>;
+  onDeleteSession: (sessionId: string) => Promise<void>;
 }
 
 export const HistoryView: React.FC<HistoryViewProps> = ({
   exercises,
   completedSessions,
   onUpdateSessionNotes,
+  onDeleteSession,
 }) => {
   const sortedCompleted = [...completedSessions].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -32,6 +37,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
     sortedCompleted[0]?.id ?? null
   );
   const [notesSavedToast, setNotesSavedToast] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
 
@@ -327,7 +333,66 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
               {shareMessage && (
                 <span className="text-[11px] text-zinc-400">{shareMessage}</span>
               )}
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-zinc-400 hover:text-red-400"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete session
+              </button>
             </div>
+
+            <BottomSheet
+              open={confirmDelete}
+              title="Delete this session?"
+              onClose={() => setConfirmDelete(false)}
+              footer={
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(false)}
+                    className="h-12 flex-1 rounded-xl border border-zinc-700 text-sm font-bold text-zinc-200"
+                  >
+                    Keep it
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const idx = sortedCompleted.findIndex(
+                        (s) => s.id === selectedSession.id
+                      );
+                      const next = sortedCompleted[idx + 1] ?? sortedCompleted[idx - 1];
+                      setConfirmDelete(false);
+                      await onDeleteSession(selectedSession.id);
+                      setSelectedSessionId(next?.id ?? null);
+                    }}
+                    className="h-12 flex-1 rounded-xl bg-red-500 text-sm font-extrabold text-white hover:bg-red-400"
+                  >
+                    Delete
+                  </button>
+                </div>
+              }
+            >
+              <div className="space-y-2 px-4 pb-4 pt-1 text-sm text-zinc-300">
+                <p>
+                  <strong className="text-white">
+                    {SPLIT_SHORT_LABELS[selectedSession.splitType]},{' '}
+                    {new Date(selectedSession.date).toLocaleDateString(undefined, {
+                      weekday: 'short',
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </strong>{' '}
+                  will be removed for good. This cannot be undone.
+                </p>
+                <p className="text-xs text-zinc-400">
+                  Its sets will no longer count toward your progress charts,
+                  weekly muscle loading or suggested weights.
+                </p>
+              </div>
+            </BottomSheet>
           </div>
 
           {/* Primary Lift Recorded Sets */}
@@ -342,7 +407,10 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                   key={s.setNumber}
                   className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1 text-xs text-zinc-200"
                 >
-                  Set {s.setNumber}: <strong>{s.weightKg} kg × {s.reps} reps</strong>
+                  Set {s.setNumber}:{' '}
+                  <strong>
+                    {formatLoad(exerciseMap.get(selectedSession.primaryLiftId), s.weightKg)} × {s.reps} reps
+                  </strong>
                   {s.rpe ? (
                     <span title="RPE = Rate of Perceived Exertion: how hard the set felt out of 10. RPE 8 means about 2 reps left in the tank.">
                       {` @ RPE ${s.rpe}`}
@@ -384,7 +452,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                           key={s.setNumber}
                           className="rounded bg-zinc-900 px-2 py-0.5"
                         >
-                          {s.weightKg}kg × {s.reps}
+                          {formatLoad(exA, s.weightKg)} × {s.reps}
                         </span>
                       ))}
                     </div>
@@ -400,7 +468,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                           key={s.setNumber}
                           className="rounded bg-zinc-900 px-2 py-0.5"
                         >
-                          {s.weightKg}kg × {s.reps}
+                          {formatLoad(exB, s.weightKg)} × {s.reps}
                         </span>
                       ))}
                     </div>

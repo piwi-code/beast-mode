@@ -317,6 +317,7 @@ export const App: React.FC = () => {
             exercises={exercises}
             completedSessions={completedSessions}
             onUpdateSessionNotes={handleUpdateSessionNotes}
+            onDeleteSession={handleDeleteSession}
           />
         )}
 

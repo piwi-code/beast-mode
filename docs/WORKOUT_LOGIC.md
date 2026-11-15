@@ -121,6 +121,7 @@ The application executes dynamic validation checks in real time as exercises, su
 - **Refreshed on start**: starting a planned session recalculates its weights for the actual date. A session that already has sets ticked off (resumed) keeps its weights.
 - **Explained on screen**: the Current Session view shows why a weight was changed, with a one-tap "Use N kg" button if the sets on screen differ from the suggestion.
 - **Never overwrites your edits**: only slots whose exercise changed are re-loaded, and sets already ticked off are left alone.
+- **Dumbbells are logged per dumbbell**: exercises flagged `dumbbellsUsed: 2` (dumbbell presses, rows, lunges, hammer curls, raises, farmer's carry) store the weight of one dumbbell. The app shows "2 × 20 kg" and the doubled total next to the weight, and doubles it for volume totals. Single-dumbbell moves (goblet squat, one-arm isolation curls) are not doubled.
 - **Drop sets**: finishers with `dropSetDrops` show the weights to use, heaviest first. Each drop is about 20% of the start weight, rounded to the exercise's `loadStepKg` (5 kg for fixed barbells) and at least one jump: 30 → 25 → 20, 40 → 30 → 20.
 - **Solo squat days** default to the plate-loaded Leg Press (Back Squat's `soloAlternativeId`); Bulgarian Split Squat remains an alternative.
 

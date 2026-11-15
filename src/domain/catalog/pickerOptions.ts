@@ -171,6 +171,7 @@ export function buildExerciseOption(ex: Exercise): PickerOption {
   const tags: PickerTag[] = [
     { label: EQUIPMENT_LABELS[ex.equipment], tone: 'neutral' },
   ];
+  if (ex.dumbbellsUsed === 2) tags.push({ label: '2 dumbbells', tone: 'neutral' });
   if (ex.isPrimaryAnchorCandidate) tags.push({ label: 'Main lift', tone: 'accent' });
   if (ex.isFinisherCandidate) tags.push({ label: 'Finisher', tone: 'accent' });
   const spine = spineLoadTag(ex.axialLoadScore);

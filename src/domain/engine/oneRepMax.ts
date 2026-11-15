@@ -42,7 +42,8 @@ export function extractMainLiftHistory(
     let totalVolumeKg = 0;
 
     for (const s of validSets) {
-      totalVolumeKg += s.weightKg * s.reps;
+      totalVolumeKg +=
+        s.weightKg * (exMap.get(session.primaryLiftId)?.dumbbellsUsed ?? 1) * s.reps;
       const e1rm = estimateOneRepMax(s.weightKg, s.reps);
       if (e1rm > best1RM) {
         best1RM = e1rm;

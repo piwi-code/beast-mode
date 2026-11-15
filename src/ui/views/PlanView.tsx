@@ -56,6 +56,7 @@ import { ExercisePicker, SupersetPicker } from '../components/ExercisePicker';
 import { ScrollCarousel } from '../components/ScrollCarousel';
 import { BuddyBadge, BuddyToggle } from '../components/BuddyToggle';
 import { isBuddyDay, setSessionBuddy } from '../../domain/engine/splits';
+import { formatLoad } from '../../domain/engine/loadFormat';
 import {
   getDropSetWeights,
   suggestFinisherLoad,
@@ -215,7 +216,7 @@ export const PlanView: React.FC<PlanViewProps> = ({
           <span>
             Suggested top set:{' '}
             <strong className="text-zinc-100">
-              {top.weightKg > 0 ? `${top.weightKg} kg` : 'Bodyweight'} × {top.reps}
+              {formatLoad(exerciseMap.get(exerciseId), top.weightKg)} × {top.reps}
             </strong>{' '}
             · {setCount} sets
           </span>
@@ -248,7 +249,7 @@ export const PlanView: React.FC<PlanViewProps> = ({
           <strong className="text-zinc-100">
             {ex?.dropSetDrops
               ? `${getDropSetWeights(loadKg, ex.loadStepKg, ex.dropSetDrops).join(' → ')} kg`
-              : `${loadKg} kg`}
+              : formatLoad(ex, loadKg)}
           </strong>{' '}
           · {fin.rounds} rounds
         </span>

@@ -55,6 +55,11 @@ export interface Exercise {
   defaultSets?: number;
   defaultReps?: string;
   mainLiftCategory?: 'BENCH' | 'SQUAT' | 'DEADLIFT' | 'OTHER';
+  /**
+   * Set to 2 when two dumbbells are used at once (e.g. dumbbell bench).
+   * Weights are always logged per dumbbell; totals multiply by this.
+   */
+  dumbbellsUsed?: 1 | 2;
   /** Rough starting weight when there is no history for this exercise yet. */
   startingLoadKg?: number;
   /** Smallest weight jump available (e.g. 5 for fixed barbells). Defaults to 2.5. */

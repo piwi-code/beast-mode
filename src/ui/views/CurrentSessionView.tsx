@@ -203,7 +203,7 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
   const topE1RM = Math.max(
     0,
     ...activeSession.primaryLiftSets.map((s) =>
-      estimateOneRepMax(s.weightKg, s.reps)
+      estimateOneRepMax(s.weightKg * (primaryEx?.dumbbellsUsed ?? 1), s.reps)
     )
   );
   const rankedCurated = rankSupersetsForSession(
@@ -367,7 +367,7 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
         type="button"
         onClick={() => onValue(Math.max(min, +(value - step).toFixed(2)))}
         className="flex h-11 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-800 active:bg-zinc-700 text-zinc-200"
-        aria-label={`Decrease ${label}`}
+        aria-label={`Decrease ${area === 'weight' ? 'kg' : label}`}
       >
         <Minus className="h-3.5 w-3.5" />
       </button>
@@ -380,7 +380,7 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
           onChange={(e) => onValue(Number(e.target.value))}
           className="w-full min-w-0 bg-transparent text-center text-sm font-extrabold text-white focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
-        <span className="block text-[9px] uppercase text-zinc-500 -mt-1">
+        <span className="block whitespace-nowrap text-[9px] uppercase text-zinc-500 -mt-1">
           {label}
         </span>
       </label>
@@ -388,7 +388,7 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
         type="button"
         onClick={() => onValue(+(value + step).toFixed(2))}
         className="flex h-11 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-800 active:bg-zinc-700 text-zinc-200"
-        aria-label={`Increase ${label}`}
+        aria-label={`Increase ${area === 'weight' ? 'kg' : label}`}
       >
         <Plus className="h-3.5 w-3.5" />
       </button>
@@ -397,7 +397,8 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
 
   const renderTouchSetRow = (
     set: LoggedSet,
-    onChange: (patch: Partial<LoggedSet>) => void
+    onChange: (patch: Partial<LoggedSet>) => void,
+    ex?: Exercise
   ) => (
     <div
       key={set.setNumber}
@@ -434,7 +435,15 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
           </span>
         </button>
 
-        {renderStepper('kg', set.weightKg, 2.5, 0, (v) => onChange({ weightKg: v }), 'weight')}
+        {renderStepper(
+          // Paired dumbbells: weight is per dumbbell, total shown alongside
+          ex?.dumbbellsUsed === 2 ? `×2 = ${set.weightKg * 2}` : 'kg',
+          set.weightKg,
+          2.5,
+          0,
+          (v) => onChange({ weightKg: v }),
+          'weight'
+        )}
         {renderStepper('reps', set.reps, 1, 1, (v) => onChange({ reps: v }), 'reps')}
       </div>
     </div>
@@ -709,8 +718,10 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
 
             <div className="space-y-2">
               {activeSession.primaryLiftSets.map((set, idx) =>
-                renderTouchSetRow(set, (patch) =>
-                  handleUpdatePrimarySet(idx, patch)
+                renderTouchSetRow(
+                  set,
+                  (patch) => handleUpdatePrimarySet(idx, patch),
+                  primaryEx
                 )
               )}
             </div>
@@ -1034,13 +1045,16 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
 
                         <div className="space-y-2">
                           {sets.map((s, sIdx) =>
-                            renderTouchSetRow(s, (patch) =>
-                              handleUpdateSupersetSet(
-                                block.id,
-                                slot,
-                                sIdx,
-                                patch
-                              )
+                            renderTouchSetRow(
+                              s,
+                              (patch) =>
+                                handleUpdateSupersetSet(
+                                  block.id,
+                                  slot,
+                                  sIdx,
+                                  patch
+                                ),
+                              ex
                             )
                           )}
                         </div>
@@ -1217,7 +1231,11 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs text-zinc-400">
-                        {ex?.dropSetDrops ? 'Start (kg):' : 'Load (kg):'}
+                        {ex?.dropSetDrops
+                          ? 'Start (kg):'
+                          : ex?.dumbbellsUsed === 2
+                            ? 'Load (kg each):'
+                            : 'Load (kg):'}
                       </span>
                       <button
                         type="button"

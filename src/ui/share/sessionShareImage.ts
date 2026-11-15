@@ -54,7 +54,8 @@ function roundRect(
   ctx.closePath();
 }
 
-const formatKg = (kg: number) => (kg > 0 ? `${kg} kg` : 'Bodyweight');
+const formatKg = (kg: number, multiplier = 1) =>
+  kg <= 0 ? 'Bodyweight' : multiplier > 1 ? `${multiplier} × ${kg} kg` : `${kg} kg`;
 
 /**
  * Draws a minimal, share-ready summary card of a workout (1080px wide PNG):
@@ -162,7 +163,9 @@ export async function renderSessionShareImage(summary: SessionSummary): Promise<
     ctx.fillStyle = C.accent;
     ctx.font = `800 46px ${FONT}`;
     const weightText =
-      row.topReps !== undefined ? `${formatKg(row.topKg)} × ${row.topReps}` : formatKg(row.topKg);
+      row.topReps !== undefined
+        ? `${formatKg(row.topKg, row.multiplier)} × ${row.topReps}`
+        : formatKg(row.topKg, row.multiplier);
     ctx.fillText(weightText, W - PAD, top + 62);
     const rightW = ctx.measureText(weightText).width;
     ctx.fillStyle = C.dim;

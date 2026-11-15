@@ -1,13 +1,16 @@
 import { Exercise, LoggedSet, WorkoutSession } from '../models/types';
 import { SPLIT_SHORT_LABELS } from './splits';
+import { getLoadMultiplier } from './loadFormat';
 
 /** Compact, shareable summary of a workout: one line per exercise actually done. */
 export interface SessionSummaryRow {
   /** "Main lift", "Superset 1", "Finisher" */
   label: string;
   name: string;
-  /** Heaviest completed set; 0 means bodyweight. */
+  /** Heaviest completed set (per dumbbell where two are used); 0 means bodyweight. */
   topKg: number;
+  /** 2 when the weight is per dumbbell and two are used at once. */
+  multiplier: number;
   /** Reps on that heaviest set (undefined for finishers). */
   topReps?: number;
   /** Completed sets, or completed rounds for finishers. */
@@ -38,6 +41,7 @@ function rowFromSets(
     label,
     name: ex?.shortName ?? ex?.name ?? 'Exercise',
     topKg: top.weightKg,
+    multiplier: getLoadMultiplier(ex),
     topReps: top.reps,
     sets: done.length,
     unit: 'sets',
@@ -64,22 +68,36 @@ export function buildSessionSummary(
       label: 'Finisher',
       name: ex?.shortName ?? ex?.name ?? 'Finisher',
       topKg: f.loadKg ?? 0,
+      multiplier: getLoadMultiplier(ex),
       sets: f.completedRounds,
       unit: 'rounds',
     });
   }
 
-  const allDone = [
-    ...session.primaryLiftSets,
-    ...session.supersets.flatMap((b) => [...b.setsA, ...b.setsB]),
-  ].filter((s) => s.completed);
+  // [sets, multiplier] per exercise: paired dumbbells count twice toward volume
+  const groups: Array<[LoggedSet[], number]> = [
+    [session.primaryLiftSets, getLoadMultiplier(exerciseMap.get(session.primaryLiftId))],
+    ...session.supersets.flatMap((b): Array<[LoggedSet[], number]> => [
+      [b.setsA, getLoadMultiplier(exerciseMap.get(b.exerciseAId))],
+      [b.setsB, getLoadMultiplier(exerciseMap.get(b.exerciseBId))],
+    ]),
+  ];
+  let totalSets = 0;
+  let totalVolumeKg = 0;
+  for (const [sets, mult] of groups) {
+    for (const s of sets) {
+      if (!s.completed) continue;
+      totalSets += 1;
+      totalVolumeKg += s.weightKg * mult * s.reps;
+    }
+  }
 
   return {
     startedAt: session.startedAt ?? session.date,
     title: SPLIT_SHORT_LABELS[session.splitType] ?? 'Workout',
     withBuddy: Boolean(session.withBuddy),
     rows,
-    totalSets: allDone.length,
-    totalVolumeKg: Math.round(allDone.reduce((sum, s) => sum + s.weightKg * s.reps, 0)),
+    totalSets,
+    totalVolumeKg: Math.round(totalVolumeKg),
   };
 }

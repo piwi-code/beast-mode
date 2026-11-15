@@ -55,3 +55,33 @@ describe('session share summary', () => {
     expect(buildSessionSummary({ ...session, startedAt: undefined }, exMap).startedAt).toBe(session.date);
   });
 });
+
+describe('paired dumbbell weights', () => {
+  it('logs per dumbbell and doubles the total for two-dumbbell exercises', async () => {
+    const { formatLoad, getTotalLoadKg } = await import('../engine/loadFormat');
+    const dbBench = exMap.get('db_flat_bench')!;
+    const goblet = exMap.get('db_goblet_squat')!;
+    expect(dbBench.dumbbellsUsed).toBe(2);
+    expect(goblet.dumbbellsUsed).toBeUndefined();
+    expect(formatLoad(dbBench, 30)).toBe('2 × 30 kg');
+    expect(formatLoad(goblet, 30)).toBe('30 kg');
+    expect(formatLoad(exMap.get('parallel_bar_dip'), 0)).toBe('Bodyweight');
+    expect(getTotalLoadKg(dbBench, 30)).toBe(60);
+
+    const base = buildDraftSessionFromSuggestion(
+      suggestNextSession(DEFAULT_PLAN_CONFIG, [], new Date('2026-11-14T09:00:00'), false, { split: 'UPPER' }),
+      SEED_EXERCISES,
+      SEED_SUPERSETS
+    );
+    const s: WorkoutSession = {
+      ...base,
+      primaryLiftId: 'db_flat_bench',
+      primaryLiftSets: [{ setNumber: 1, weightKg: 30, reps: 10, completed: true }],
+      supersets: [],
+      finishers: [],
+    };
+    const summary = buildSessionSummary(s, exMap);
+    expect(summary.rows[0]).toMatchObject({ topKg: 30, multiplier: 2 });
+    expect(summary.totalVolumeKg).toBe(30 * 2 * 10);
+  });
+});
