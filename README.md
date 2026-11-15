@@ -33,7 +33,7 @@ A local-first Progressive Web Application (PWA) for planning modular gym session
 
 - [Workout Logic & Rules Engine Specification](docs/WORKOUT_LOGIC.md)
 - [System Architecture & Backend Migration Guide](docs/ARCHITECTURE.md)
-- [Project Roadmap & Task Tracker](docs/ROADMAP.md)
+- [Project Roadmap & Task Tracker](docs/ROADMAP.md) (includes the V2 plan: accounts and hosted data, social features, Strava and other integrations)
 
 ## Local Development
 

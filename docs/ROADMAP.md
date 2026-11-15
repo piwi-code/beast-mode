@@ -54,7 +54,37 @@ When the POC phase ends: enable branch protection on `main` (require PR + passin
 
 ---
 
-## Phase 3: Cross-Device Sync & Self-Hosted / Hobby Backend
-- [ ] Implement `RemoteSyncRepository` adapter (compatible with PocketBase over Cloudflare Tunnel/Tailscale or Supabase free tier)
-- [ ] Offline-first sync queue (log workouts offline in the gym basement, sync automatically when back on Wi-Fi)
-- [ ] Multi-user "Buddy Mode" live session sharing (Partner A and Partner B see shared bar loads and alternating set prompts)
+## Next up (V1): History analytics
+- [ ] More analytics on the History page. Candidates, using data already recorded: session duration and rest times (set/round/session timestamps), weekly volume trend, per-exercise progress beyond the three main lifts, personal bests, training frequency per split.
+
+---
+
+## V2: Accounts, Social & Integrations
+
+Not started. Everything below is deliberately out of scope for V1, which stays a local-only app (data in the browser, JSON export/import for backup). Ordered by dependency: each step relies on the one before it.
+
+### V2.1 Auth & hosted database
+The foundation for everything else in V2.
+- [ ] Choose a backend (see the options table in `ARCHITECTURE.md` §3: self-hosted PocketBase, or a hosted free tier such as Supabase).
+- [ ] Sign-in (email link or a social login) and a per-user data store.
+- [ ] `RemoteSyncRepository` adapter behind the existing `IWorkoutRepository` interface, so the domain and UI layers do not change.
+- [ ] Offline-first: keep IndexedDB as the working copy and sync in the background (log in the gym basement, sync when back on Wi-Fi).
+- [ ] One-time import of a user's existing local data into their account.
+- [ ] Protect `main` and move to pull requests before real user data is hosted (see Development Workflow above).
+- Open questions: conflict handling when two devices edit the same session; whether using the app without an account stays supported.
+
+### V2.2 Social
+Needs V2.1 (identities and shared storage).
+- [ ] Friends: find and add a training buddy.
+- [ ] Linked buddy sessions: both partners attached to the same session, each logging their own weights; the Buddy toggle could become "training with <name>".
+- [ ] Live "Buddy Mode": partners see shared bar loads and alternating set prompts during a session.
+- [ ] Share a real workout page (a link, not only the image the app can share today), viewable by friends or anyone with the link.
+- [ ] Shareable workout templates (send a planned session to your buddy).
+- Open questions: privacy defaults (who can see what), and whether shared pages are public or sign-in only.
+
+### V2.3 External services (e.g. Strava)
+Needs V2.1 (a server to hold access tokens securely; they cannot live in a static site).
+- [ ] Connect a Strava account (OAuth).
+- [ ] Post completed workouts to Strava as an activity (duration from the session timestamps, summary of lifts).
+- [ ] Read runs from Strava so the 48-hour recovery and weekly load rules can account for running, which is the app's reason for tracking leg fatigue in the first place.
+- Open questions: which other services matter (Garmin, Apple Health, Google Fit) and whether import, export or both.

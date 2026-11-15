@@ -71,6 +71,13 @@ All data operations are asynchronous (`Promise<T>`) even when backed by local In
 | **Phase 2A: Self-Hosted (PocketBase / SQLite) + Cloudflare Tunnel or Tailscale** | Run a single PocketBase binary or lightweight Node/Go container on a home server/Raspberry Pi/NAS. Expose privately via Tailscale or publicly via Cloudflare Zero Trust Tunnel. Implement `PocketBaseRepository`. | **$0 / mo** |
 | **Phase 2B: Cloud Hobby Tier (Supabase / Turso / Cloudflare D1 + Workers)** | Keep GitHub Pages (or Cloudflare Pages) for frontend; swap `RepositoryContext` to `SupabaseRepository` or keep `DexieRepository` with a background sync queue. | **$0 / mo** (Free Tier) |
 
+### V2 direction (not started)
+The planned V2 work is recorded in `ROADMAP.md` ("V2: Accounts, Social & Integrations"): auth and a hosted database first, then social features, then external services such as Strava. Design constraints to keep in mind until then:
+- Keep all persistence behind `IWorkoutRepository` so a remote/sync adapter can be added without touching the domain or UI layers.
+- Keep the domain layer pure (no UI or storage imports); social and integration features should consume it, not reach around it.
+- Records already carry what V2 needs to build on: stable ids, `startedAt` / `completedAt` on sessions, `completedAt` on sets and finisher rounds, and a per-session `withBuddy` flag that can later point at a real user.
+- Secrets (OAuth tokens for Strava and similar) need a server; the static GitHub Pages site cannot hold them.
+
 ---
 
 ## 4. Data Flow Diagram
