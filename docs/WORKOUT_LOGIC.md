@@ -113,17 +113,23 @@ The application executes dynamic validation checks in real time as exercises, su
 
 ## 3b. Weight Suggestions (`src/domain/engine/loads.ts`)
 
+- **Real gym weights** (`src/domain/engine/increments.ts`): everything is stored and shown in kg, but only weights that exist on the kit are suggested, and the +/- buttons step between them:
+  - **Dumbbells** (kg): 1 kg steps up to 10 kg, then 2 kg steps (12, 14, 16 ...).
+  - **Cable stacks**: 5 lb add-on steps (major plate 10 lb). **Other pin-stack machines**: 5 lb add-on steps (major plate 15 lb). Converted to kg (50 lb = 22.7 kg) with the lb pin shown alongside so it can be found on the stack.
+  - **Plate-loaded barbells, Leg Press, sled**: 2.5 kg steps. **Fixed barbells**: 5 kg steps.
+  - Per-exercise override: `Exercise.loadProfile` (`plates`, `fixed-bar`, `dumbbell`, `cable-stack`, `machine-stack`); otherwise chosen from the equipment type. Weights logged before these rules are snapped to the nearest real setting when suggested again. Typed-in weights are kept as entered.
+
 - **Last recorded first**: when an exercise is added to a session (new session, new superset, exercise swap, split switch), its sets start from the weights and reps logged the last time that exercise was completed, whether as a primary lift or in a superset. Finishers reuse their last finisher load.
 - **Otherwise a starting weight**, in order of trust: (1) the weight you entered for that lift in Settings (`PlanConfig.startingWeights`, offered for Bench, Squat, Deadlift, Overhead Press and Leg Press); (2) a prediction from a related lift you have logged or entered, using rule-of-thumb ratios (`LIFT_RATIOS`, e.g. Dumbbell Bench ≈ 35% of Bench Press per dumbbell, Leg Press ≈ 150% of Squat, RDL ≈ 70% of Deadlift; each works in both directions, logged lifts preferred over entered ones); (3) the exercise's `startingLoadKg` or a rough default for its equipment type.
 - **Timestamps**: each set records `completedAt` when ticked (cleared if unticked), finishers record one timestamp per completed round, and sessions record `startedAt` and `completedAt`. Not shown yet; kept for later analysis (rest times, duration).
 - **Break reduction**: if the exercise was last done 3+ weeks before the session date, the last recorded weights are eased back: 10% at 3–6 weeks, 15% at 6–12 weeks, 20% at 12+ weeks (`BREAK_TIERS`), rounded to the exercise's weight jump and always at least one jump down. Reps are kept. Finisher loads get the same reduction. Takes priority over progression.
-- **Progression**: otherwise, if every completed set last time reached the top of the exercise's rep range (`defaultReps`, e.g. 8 for "5-8"), the weight goes up one jump (2.5 kg; 5 kg for barbell/machine squat and hinge lifts) and reps reset to the bottom of the range. Exercises without a rep range (carries, sleds) and finishers do not auto-progress.
+- **Progression**: otherwise, if every completed set last time reached the top of the exercise's rep range (`defaultReps`, e.g. 8 for "5-8"), the weight goes up one real step on that kit (next dumbbell, one 5 lb add-on on a stack, one 2.5 kg plate step; at least 5 kg for big plate-loaded squat/hinge lifts) and reps reset to the bottom of the range. Exercises without a rep range (carries, sleds) and finishers do not auto-progress.
 - **Shown when planning**: each exercise in a planned session (primary lift, both superset slots, finishers) shows its suggested top set for the planned date and the reason (same as last time, eased back, stepped up, or starting estimate).
 - **Refreshed on start**: starting a planned session recalculates its weights for the actual date. A session that already has sets ticked off (resumed) keeps its weights.
 - **Explained on screen**: the Current Session view shows why a weight was changed, with a one-tap "Use N kg" button if the sets on screen differ from the suggestion.
 - **Never overwrites your edits**: only slots whose exercise changed are re-loaded, and sets already ticked off are left alone.
 - **Dumbbells are logged per dumbbell**: exercises flagged `dumbbellsUsed: 2` (dumbbell presses, rows, lunges, hammer curls, raises, farmer's carry) store the weight of one dumbbell. The app shows "2 × 20 kg" and the doubled total next to the weight, and doubles it for volume totals. Single-dumbbell moves (goblet squat, one-arm isolation curls) are not doubled.
-- **Drop sets**: finishers with `dropSetDrops` show the weights to use, heaviest first. Each drop is about 20% of the start weight, rounded to the exercise's `loadStepKg` (5 kg for fixed barbells) and at least one jump: 30 → 25 → 20, 40 → 30 → 20.
+- **Drop sets**: finishers with `dropSetDrops` show the weights to use, heaviest first. Each drop is about 20% of the start weight, snapped to the kit and at least one real jump: one fixed bar (5 kg, e.g. 30 → 25 → 20, 40 → 30 → 20) or one major stack plate (e.g. 55 → 45 → 35 lb on a cable, shown in kg with the lb pins).
 - **Solo squat days** default to the plate-loaded Leg Press (Back Squat's `soloAlternativeId`); Bulgarian Split Squat remains an alternative.
 
 ---

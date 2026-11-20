@@ -62,7 +62,13 @@ export interface Exercise {
   dumbbellsUsed?: 1 | 2;
   /** Rough starting weight when there is no history for this exercise yet. */
   startingLoadKg?: number;
-  /** Smallest weight jump available (e.g. 5 for fixed barbells). Defaults to 2.5. */
+  /**
+   * Which weights exist on this kit (see engine/increments.ts). Defaults by
+   * equipment: dumbbells -> dumbbell ladder, CABLE -> 5/10 lb stack,
+   * MACHINE -> 5/15 lb stack, everything else -> 2.5 kg plates.
+   */
+  loadProfile?: 'plates' | 'fixed-bar' | 'dumbbell' | 'cable-stack' | 'machine-stack';
+  /** kg jump for 'plates' / 'fixed-bar' profiles (default 2.5 / 5). */
   loadStepKg?: number;
   /** Number of weight drops per round when this is a drop-set finisher. */
   dropSetDrops?: number;

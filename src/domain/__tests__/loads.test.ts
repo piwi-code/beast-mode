@@ -29,13 +29,13 @@ const draft = (split: 'UPPER' | 'LOWER', id: string, date: string): WorkoutSessi
   id,
 });
 
-// A completed Upper session where Machine Row was done at 62.5 kg x 9
+// A completed Upper session where Machine Row was done at 140 lb (63.5 kg) x 9
 const past: WorkoutSession = (() => {
   const s = draft('UPPER', 'past', '2026-11-01T09:00:00');
   const b = s.supersets.find((x) => x.exerciseAId === 'machine_row_narrow')!;
-  b.setsA = b.setsA.map((x) => ({ ...x, weightKg: 62.5, reps: 9, completed: true }));
+  b.setsA = b.setsA.map((x) => ({ ...x, weightKg: 63.5, reps: 9, completed: true }));
   s.primaryLiftSets = s.primaryLiftSets.map((x) => ({ ...x, weightKg: 90, reps: 5, completed: true }));
-  s.finishers = [{ ...s.finishers[0], loadKg: 27.5, completedRounds: 3 }];
+  s.finishers = [{ ...s.finishers[0], loadKg: 27.2, completedRounds: 3 }]; // 60 lb cable
   return { ...s, status: 'COMPLETED' };
 })();
 
@@ -43,7 +43,7 @@ describe('weight suggestions', () => {
   it('uses the last recorded weight for an exercise, else an estimate', () => {
     const fromHistory = suggestLoad('machine_row_narrow', 3, [past], exMap);
     expect(fromHistory.source).toBe('history');
-    expect(fromHistory.sets[0]).toEqual({ weightKg: 62.5, reps: 9 });
+    expect(fromHistory.sets[0]).toEqual({ weightKg: 63.5, reps: 9 });
 
     const estimate = suggestLoad('leg_press_machine', 4, [past], exMap);
     expect(estimate.source).toBe('estimate');
@@ -54,8 +54,8 @@ describe('weight suggestions', () => {
     const fresh = applySuggestedLoads(undefined, draft('UPPER', 'new', '2026-11-14T09:00:00'), [past], exMap);
     expect(fresh.primaryLiftSets[0]).toMatchObject({ weightKg: 90, reps: 5, completed: false });
     const row = fresh.supersets.find((x) => x.exerciseAId === 'machine_row_narrow')!;
-    expect(row.setsA.every((x) => x.weightKg === 62.5 && !x.completed)).toBe(true);
-    expect(fresh.finishers[0].loadKg).toBe(27.5);
+    expect(row.setsA.every((x) => x.weightKg === 63.5 && !x.completed)).toBe(true);
+    expect(fresh.finishers[0].loadKg).toBe(27.2);
   });
 
   it('only touches slots whose exercise changed, and never completed sets', () => {
@@ -78,7 +78,7 @@ describe('weight suggestions', () => {
     expect(after.primaryLiftSets[0].weightKg).toBe(77.5); // manual edit kept
     expect(after.supersets[0]).toEqual(edited.supersets[0]); // untouched slot
     expect(after.supersets[1].setsA[0].weightKg).toBe(1); // completed set kept
-    expect(after.supersets[1].setsA[1].weightKg).toBe(62.5); // swapped slot re-loaded
+    expect(after.supersets[1].setsA[1].weightKg).toBe(63.5); // swapped slot re-loaded
   });
 
   it('swapping a finisher uses its last finisher load when there is one', () => {
@@ -87,7 +87,7 @@ describe('weight suggestions', () => {
       ...s,
       finishers: [changeFinisherExercise(s.finishers[0], exMap.get('rope_face_pull'), 'rope_face_pull')],
     };
-    expect(applySuggestedLoads(s, swapped, [past], exMap).finishers[0].loadKg).toBe(27.5);
+    expect(applySuggestedLoads(s, swapped, [past], exMap).finishers[0].loadKg).toBe(27.2);
   });
 });
 
@@ -99,7 +99,7 @@ describe('break reduction and progression', () => {
       status: 'COMPLETED',
       primaryLiftSets: s.primaryLiftSets.map((x) => ({ ...x, weightKg, reps, completed: true })),
       supersets: [],
-      finishers: [{ ...s.finishers[0], loadKg: 30, completedRounds: 2 }],
+      finishers: [{ ...s.finishers[0], loadKg: 29.5, completedRounds: 2 }], // 65 lb cable
     };
   };
   const on = (d: string) => new Date(`${d}T09:00:00`);
@@ -133,7 +133,7 @@ describe('break reduction and progression', () => {
       primaryLiftSets: [{ setNumber: 1, weightKg: 5, reps: 12, completed: true }],
     };
     const s = suggestLoad('db_lateral_raise', 3, [light], exMap, on('2026-11-14'));
-    expect(s.sets[0].weightKg).toBe(2.5);
+    expect(s.sets[0].weightKg).toBe(4); // 5 kg dumbbell -> 4 kg (1 kg steps up to 10 kg)
   });
 
   it('bumps the weight when every set hit the top of the rep range', () => {
@@ -161,8 +161,9 @@ describe('break reduction and progression', () => {
     const hist = [benchSession('2026-10-01T09:00:00', 85, 6)];
     const fresh = applySuggestedLoads(undefined, draft('UPPER', 'n', '2026-11-14T09:00:00'), hist, exMap);
     expect(fresh.primaryLiftSets[0].weightKg).toBe(72.5);
-    expect(fresh.finishers[0].loadKg).toBe(25); // 30 * 0.85 = 25.5 -> 25
-    expect(suggestFinisherLoad('rope_face_pull', hist, exMap, on('2026-10-05'))).toBe(30);
+    // face pull is a cable: 65 lb (29.5 kg), -15% ~ 55 lb = 24.9 kg
+    expect(fresh.finishers[0].loadKg).toBe(24.9);
+    expect(suggestFinisherLoad('rope_face_pull', hist, exMap, on('2026-10-05'))).toBe(29.5);
   });
 });
 
@@ -189,7 +190,7 @@ describe('starting weight predictions', () => {
   it('predicts a related lift from one you have logged', () => {
     const s = suggestLoad('db_flat_bench', 3, [benchDone], exMap, on);
     expect(s.source).toBe('estimate');
-    expect(s.sets[0].weightKg).toBe(27.5); // 80 * 0.35 = 28 -> 27.5 per dumbbell
+    expect(s.sets[0].weightKg).toBe(28); // 80 * 0.35 = 28 kg per dumbbell (2 kg steps above 10)
     expect(s.basis).toMatch(/Predicted from your Bench Press \(80 kg\)/);
   });
 

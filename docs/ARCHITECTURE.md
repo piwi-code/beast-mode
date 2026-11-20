@@ -21,6 +21,7 @@ beast-mode/
 │   │   ├── models/          # Entities: Exercise, SupersetPair, WorkoutSession, LiftSet, PlanConfig
 │   │   ├── engine/          # Pure business logic:
 │   │   │   ├── sequencer.ts         # Next session & primary lift recommendation engine
+│   │   │   ├── increments.ts        # Which weights exist on each kit (dumbbell ladder, lb pin stacks, plates) in kg
 │   │   │   ├── loads.ts             # Weight suggestions (last recorded / estimate) & drop-set weights
 │   │   │   ├── sessionSummary.ts    # Shareable per-exercise summary of a workout (top weight, sets)
 │   │   │   ├── splits.ts            # Split labels, buddy-day & spotter-safety helpers, legacy data migration

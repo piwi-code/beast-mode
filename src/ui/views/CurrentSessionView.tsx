@@ -62,10 +62,13 @@ import {
 } from '../../domain/engine/splits';
 import { estimateOneRepMax } from '../../domain/engine/oneRepMax';
 import {
-  getDropSetWeights,
+  getDropSetWeightsFor,
+  stackHintForExercise,
   stampFinisherRounds,
   suggestLoad,
 } from '../../domain/engine/loads';
+import { getLoadProfile, stepLoad } from '../../domain/engine/increments';
+import { formatDropSet } from '../../domain/engine/loadFormat';
 
 interface CurrentSessionViewProps {
   plan: PlanConfig;
@@ -361,15 +364,15 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
   const renderStepper = (
     label: string,
     value: number,
-    step: number,
-    min: number,
+    down: (v: number) => number,
+    up: (v: number) => number,
     onValue: (v: number) => void,
     area: 'weight' | 'reps'
   ) => (
     <div className="flex min-w-0 items-center gap-1" style={{ gridArea: area }}>
       <button
         type="button"
-        onClick={() => onValue(Math.max(min, +(value - step).toFixed(2)))}
+        onClick={() => onValue(down(value))}
         className="flex h-11 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-800 active:bg-zinc-700 text-zinc-200"
         aria-label={`Decrease ${area === 'weight' ? 'kg' : label}`}
       >
@@ -379,7 +382,7 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
         <input
           type="number"
           inputMode="decimal"
-          step={step}
+          step="any"
           value={value}
           onChange={(e) => onValue(Number(e.target.value))}
           className="w-full min-w-0 bg-transparent text-center text-sm font-extrabold text-white focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
@@ -390,7 +393,7 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
       </label>
       <button
         type="button"
-        onClick={() => onValue(+(value + step).toFixed(2))}
+        onClick={() => onValue(up(value))}
         className="flex h-11 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-800 active:bg-zinc-700 text-zinc-200"
         aria-label={`Increase ${area === 'weight' ? 'kg' : label}`}
       >
@@ -446,15 +449,29 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
         </button>
 
         {renderStepper(
-          // Paired dumbbells: weight is per dumbbell, total shown alongside
-          ex?.dumbbellsUsed === 2 ? `×2 = ${set.weightKg * 2}` : 'kg',
+          // Paired dumbbells: weight is per dumbbell, total shown alongside.
+          // Pin stacks: the lb setting to look for on the stack.
+          ex?.dumbbellsUsed === 2
+            ? `×2 = ${Math.round(set.weightKg * 20) / 10}`
+            : (() => {
+                const pin = stackHintForExercise(ex, set.weightKg);
+                return pin ?? 'kg';
+              })(),
           set.weightKg,
-          2.5,
-          0,
+          // +/- move to the next weight that exists on this kit
+          (v) => stepLoad(v, getLoadProfile(ex), -1),
+          (v) => stepLoad(v, getLoadProfile(ex), 1),
           (v) => onChange({ weightKg: v }),
           'weight'
         )}
-        {renderStepper('reps', set.reps, 1, 1, (v) => onChange({ reps: v }), 'reps')}
+        {renderStepper(
+          'reps',
+          set.reps,
+          (v) => Math.max(1, v - 1),
+          (v) => v + 1,
+          (v) => onChange({ reps: v }),
+          'reps'
+        )}
       </div>
     </div>
   );
@@ -1224,12 +1241,10 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                         {ex.equipment === 'BARBELL' ? 'Bars to set out: ' : 'Weights: '}
                       </span>
                       <span className="font-extrabold">
-                        {getDropSetWeights(
-                          fin.loadKg ?? ex.finisherLoadKg ?? 20,
-                          ex.loadStepKg,
-                          ex.dropSetDrops
-                        ).join(' → ')}{' '}
-                        kg
+                        {formatDropSet(
+                          ex,
+                          getDropSetWeightsFor(ex, fin.loadKg ?? ex.finisherLoadKg ?? 20)
+                        )}
                       </span>
                     </div>
                   )}
@@ -1257,9 +1272,10 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                               f.id === fin.id
                                 ? {
                                     ...f,
-                                    loadKg: Math.max(
-                                      0,
-                                      (f.loadKg ?? 25) - (ex?.loadStepKg ?? 2.5)
+                                    loadKg: stepLoad(
+                                      f.loadKg ?? 25,
+                                      getLoadProfile(ex),
+                                      -1
                                     ),
                                   }
                                 : f
@@ -1270,8 +1286,13 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                       >
                         <Minus className="h-3.5 w-3.5" />
                       </button>
-                      <span className="w-10 text-center text-sm font-extrabold text-white">
+                      <span className="min-w-[2.5rem] text-center text-sm font-extrabold text-white">
                         {fin.loadKg ?? 25}
+                        {stackHintForExercise(ex, fin.loadKg ?? 25) && (
+                          <span className="block text-[9px] font-semibold uppercase text-zinc-500">
+                            {stackHintForExercise(ex, fin.loadKg ?? 25)}
+                          </span>
+                        )}
                       </span>
                       <button
                         type="button"
@@ -1282,8 +1303,11 @@ export const CurrentSessionView: React.FC<CurrentSessionViewProps> = ({
                               f.id === fin.id
                                 ? {
                                     ...f,
-                                    loadKg:
-                                      (f.loadKg ?? 25) + (ex?.loadStepKg ?? 2.5),
+                                    loadKg: stepLoad(
+                                      f.loadKg ?? 25,
+                                      getLoadProfile(ex),
+                                      1
+                                    ),
                                   }
                                 : f
                             ),

@@ -4,6 +4,13 @@ import {
   SessionFinisherBlock,
   WorkoutSession,
 } from '../models/types';
+import {
+  LoadProfile,
+  getLoadProfile,
+  snapLoad,
+  stackLbLabel,
+  stepLoad,
+} from './increments';
 
 /**
  * Weight suggestions.
@@ -55,19 +62,40 @@ export function parseRepRange(
   return { min, max: m[2] ? Number(m[2]) : min };
 }
 
-/** Weight jump when progressing: 5 kg for big lower-body lifts, otherwise one step. */
-export function getProgressionIncrementKg(ex: Exercise | undefined): number {
-  const step = ex?.loadStepKg ?? DEFAULT_STEP_KG;
+/**
+ * Next weight when progressing: one available step up (one 5 lb add-on on a
+ * stack, the next dumbbell, one plate pair), except big plate-loaded lower
+ * lifts (squat, deadlift, leg press...) which go up at least 5 kg.
+ */
+export function progressLoad(ex: Exercise | undefined, kg: number): number {
+  const profile = getLoadProfile(ex);
   const bigLowerLift =
+    profile.kind === 'linear' &&
     (ex?.pattern === 'KNEE_DOMINANT' || ex?.pattern === 'HIP_HINGE') &&
     (ex.equipment === 'BARBELL' || ex.equipment === 'MACHINE');
-  return bigLowerLift ? Math.max(5, step) : step;
+  let next = stepLoad(kg, profile, 1);
+  while (bigLowerLift && next - kg < 5 - 1e-6) next = stepLoad(next, profile, 1);
+  return next;
 }
 
-const DEFAULT_STEP_KG = 2.5;
+/**
+ * `kg` reduced by `pct`, snapped to an available weight and always at least
+ * one step lower (never below 0).
+ */
+export function reduceLoad(kg: number, pct: number, profile: LoadProfile): number {
+  if (kg <= 0) return 0;
+  const cut = snapLoad(kg * (1 - pct), profile);
+  return cut < kg - 1e-6 ? cut : stepLoad(kg, profile, -1);
+}
 
-export function roundToStep(kg: number, step: number = DEFAULT_STEP_KG): number {
-  return Math.round(kg / step) * step;
+/** Snaps a weight to what the exercise's kit actually offers. */
+export function snapForExercise(ex: Exercise | undefined, kg: number): number {
+  return snapLoad(kg, getLoadProfile(ex));
+}
+
+/** "50 lb" hint for pin-stack exercises so the pin can be found; undefined otherwise. */
+export function stackHintForExercise(ex: Exercise | undefined, kg: number): string | undefined {
+  return stackLbLabel(kg, getLoadProfile(ex));
 }
 
 export function estimateStartingLoad(ex: Exercise | undefined): number {
@@ -162,11 +190,11 @@ export function predictStartingLoad(
   exerciseMap: Map<string, Exercise>,
   startingWeights: StartingWeights = {}
 ): { kg: number; basis: string } {
-  const step = ex?.loadStepKg ?? DEFAULT_STEP_KG;
+  const profile = getLoadProfile(ex);
   if (ex) {
     const own = startingWeights[ex.id];
     if (own && own > 0) {
-      return { kg: roundToStep(own, step), basis: 'Your starting weight from Settings.' };
+      return { kg: snapLoad(own, profile), basis: 'Your starting weight from Settings.' };
     }
 
     const candidates: Array<{ kg: number; from: 'history' | 'settings'; name: string; anchorKg: number }> = [];
@@ -187,13 +215,13 @@ export function predictStartingLoad(
     const best = candidates.find((c) => c.from === 'history') ?? candidates[0];
     if (best) {
       return {
-        kg: Math.max(step, roundToStep(best.kg, step)),
+        kg: Math.max(stepLoad(0, profile, 1), snapLoad(best.kg, profile)),
         basis: `Predicted from your ${best.name} (${best.anchorKg} kg). Adjust on the day.`,
       };
     }
   }
   return {
-    kg: roundToStep(estimateStartingLoad(ex), step),
+    kg: snapLoad(estimateStartingLoad(ex), profile),
     basis: 'Starting estimate: no history for this exercise yet.',
   };
 }
@@ -261,7 +289,7 @@ export function suggestLoad(
   startingWeights: StartingWeights = {}
 ): SuggestedLoad {
   const ex = exerciseMap.get(exerciseId);
-  const step = ex?.loadStepKg ?? DEFAULT_STEP_KG;
+  const profile = getLoadProfile(ex);
   const last = getLastLogged(exerciseId, history);
 
   if (!last) {
@@ -275,22 +303,19 @@ export function suggestLoad(
     };
   }
 
+  // Snapped so weights logged before the kit rules existed land on real settings
   const base = Array.from({ length: setCount }, (_, i) => {
     const src = last.sets[Math.min(i, last.sets.length - 1)];
-    return { weightKg: src.weightKg, reps: src.reps };
+    return { weightKg: snapLoad(src.weightKg, profile), reps: src.reps };
   });
-  const topLast = Math.max(...last.sets.map((x) => x.weightKg));
+  const topLast = Math.max(...base.map((x) => x.weightKg));
   const name = ex?.shortName ?? ex?.name ?? 'this exercise';
 
   // a) Break reduction
   const days = daysBetween(last.date, referenceDate);
   const reducePct = getBreakReductionPct(days);
   if (reducePct > 0 && topLast > 0) {
-    const reduce = (kg: number) => {
-      const cut = roundToStep(kg * (1 - reducePct), step);
-      // always come down at least one jump, never below zero
-      return Math.max(0, cut < kg ? cut : kg - step);
-    };
+    const reduce = (kg: number) => reduceLoad(kg, reducePct, profile);
     const sets = base.map((x) => ({ ...x, weightKg: reduce(x.weightKg) }));
     const toKg = reduce(topLast);
     return {
@@ -310,18 +335,17 @@ export function suggestLoad(
   // b) Progression: every set last time hit the top of the rep range
   const range = parseRepRange(ex?.defaultReps);
   if (range && topLast > 0 && last.sets.every((x) => x.reps >= range.max)) {
-    const inc = getProgressionIncrementKg(ex);
-    const sets = base.map((x) => ({ weightKg: x.weightKg + inc, reps: range.min }));
+    const toKg = progressLoad(ex, topLast);
+    const inc = Math.round((toKg - topLast) * 10) / 10;
+    const sets = base.map((x) => ({ weightKg: progressLoad(ex, x.weightKg), reps: range.min }));
     return {
       source: 'history',
       sets,
       adjustment: {
         kind: 'PROGRESS',
         fromKg: topLast,
-        toKg: topLast + inc,
-        note: `You hit ${range.max}+ reps on every set last time: up ${inc} kg (${topLast} → ${
-          topLast + inc
-        } kg), aim for ${range.min}${range.max > range.min ? `–${range.max}` : ''} reps.`,
+        toKg,
+        note: `You hit ${range.max}+ reps on every set last time: up ${inc} kg (${topLast} → ${toKg} kg), aim for ${range.min}${range.max > range.min ? `–${range.max}` : ''} reps.`,
       },
     };
   }
@@ -359,11 +383,10 @@ export function suggestFinisherLoad(
 ): number | undefined {
   const last = getLastFinisher(exerciseId, history);
   if (!last) return undefined;
-  const step = exerciseMap.get(exerciseId)?.loadStepKg ?? DEFAULT_STEP_KG;
+  const profile = getLoadProfile(exerciseMap.get(exerciseId));
+  const lastKg = snapLoad(last.loadKg, profile);
   const pct = getBreakReductionPct(daysBetween(last.date, referenceDate));
-  if (!pct) return last.loadKg;
-  const cut = roundToStep(last.loadKg * (1 - pct), step);
-  return Math.max(0, cut < last.loadKg ? cut : last.loadKg - step);
+  return pct ? reduceLoad(lastKg, pct, profile) : lastKg;
 }
 
 function reload(
@@ -434,24 +457,44 @@ export function applySuggestedLoads(
 }
 
 /**
- * Weights for a drop set, heaviest first: each drop is about `dropPct` of the
- * starting weight, rounded to the available jump (e.g. 5 kg fixed barbells)
- * and always at least one jump. 30 kg with 5 kg bars -> [30, 25, 20].
+ * Weights for a drop set, heaviest first. Each drop is about `dropPct` of the
+ * starting weight, snapped to what the kit offers, and at least one real
+ * jump: one fixed bar (5 kg), one dumbbell, or one major plate on a stack
+ * (10 lb cables / 15 lb machines).
+ *   30 kg fixed bars -> 30, 25, 20     55 lb cable -> 55, 45, 35 lb (in kg)
+ * Pass a number instead of a profile for plain linear kg jumps.
  */
 export function getDropSetWeights(
   startKg: number,
-  stepKg: number = DEFAULT_STEP_KG,
+  profileOrStepKg: LoadProfile | number = 2.5,
   drops: number = 2,
   dropPct: number = 0.2
 ): number[] {
-  const drop = Math.max(stepKg, roundToStep(startKg * dropPct, stepKg));
-  const weights = [startKg];
+  const profile: LoadProfile =
+    typeof profileOrStepKg === 'number'
+      ? { kind: 'linear', stepKg: profileOrStepKg }
+      : profileOrStepKg;
+  const start = snapLoad(startKg, profile);
+  const minDrop =
+    profile.kind === 'stack'
+      ? profile.majorLb * 0.45359237
+      : profile.kind === 'linear'
+        ? profile.stepKg
+        : 0;
+  const weights = [start];
   for (let i = 0; i < drops; i++) {
-    const nextKg = weights[weights.length - 1] - drop;
-    if (nextKg < stepKg) break;
-    weights.push(nextKg);
+    const prev = weights[weights.length - 1];
+    let next = snapLoad(prev - Math.max(start * dropPct, minDrop), profile);
+    if (next >= prev - 1e-6) next = stepLoad(prev, profile, -1);
+    if (next <= 0) break;
+    weights.push(next);
   }
   return weights;
+}
+
+/** Drop-set weights for an exercise, using its kit rules. */
+export function getDropSetWeightsFor(ex: Exercise | undefined, startKg: number): number[] {
+  return getDropSetWeights(startKg, getLoadProfile(ex), ex?.dropSetDrops ?? 2);
 }
 
 /** True once any set or finisher round has been ticked off. */

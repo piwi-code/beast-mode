@@ -14,7 +14,7 @@ import {
   isBuddyDay,
   isLowerSplit,
 } from './splits';
-import { estimateStartingLoad } from './loads';
+import { estimateStartingLoad, snapForExercise } from './loads';
 
 export { SPLIT_LABELS, SPLIT_SHORT_LABELS } from './splits';
 
@@ -201,7 +201,7 @@ export function buildFinisherBlock(
     exerciseId,
     rounds: Math.min(3, exercise?.defaultSets ?? 3),
     protocolNote: exercise?.finisherProtocol ?? '3 rounds, controlled tempo',
-    loadKg: exercise?.finisherLoadKg ?? 20,
+    loadKg: snapForExercise(exercise, exercise?.finisherLoadKg ?? 20),
     completedRounds: 0,
   };
 }
@@ -350,7 +350,10 @@ export function buildDraftSessionFromSuggestion(
   const primaryExercise = exerciseMap.get(primaryLiftId);
   const primarySetCount = primaryExercise?.defaultSets ?? 4;
 
-  const defaultPrimaryWeight = estimateStartingLoad(primaryExercise);
+  const defaultPrimaryWeight = snapForExercise(
+    primaryExercise,
+    estimateStartingLoad(primaryExercise)
+  );
 
   const primaryLiftSets = Array.from({ length: primarySetCount }, (_, idx) => ({
     setNumber: idx + 1,

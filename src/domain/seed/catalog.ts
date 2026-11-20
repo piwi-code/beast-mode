@@ -597,6 +597,8 @@ export const SEED_EXERCISES: Exercise[] = [
     primaryMuscles: ['QUADS', 'GLUTES'],
     secondaryMuscles: ['HAMSTRINGS'],
     equipment: 'MACHINE',
+    // Plate-loaded, not a pin stack
+    loadProfile: 'plates',
     axialLoadScore: 0,
     gripTax: 0,
     jointStressLevel: 2,
@@ -977,6 +979,7 @@ export const SEED_EXERCISES: Exercise[] = [
       '8–10 reps → next bar down → near failure → lightest bar → failure (90s rest between rounds)',
     finisherLoadKg: 30,
     // Fixed barbells come in 5 kg jumps
+    loadProfile: 'fixed-bar',
     loadStepKg: 5,
     dropSetDrops: 2,
     defaultSets: 2,
