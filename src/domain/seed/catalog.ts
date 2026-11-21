@@ -106,6 +106,8 @@ export const SEED_EXERCISES: Exercise[] = [
     ],
     isPrimaryAnchorCandidate: true,
     mainLiftCategory: 'DEADLIFT',
+    // RDL ~75% of a conventional deadlift
+    barbellEquivalence: 0.75,
     startingLoadKg: 95,
     defaultSets: 4,
     defaultReps: '6-8',
@@ -156,6 +158,8 @@ export const SEED_EXERCISES: Exercise[] = [
     ],
     isPrimaryAnchorCandidate: true,
     mainLiftCategory: 'BENCH',
+    // Dumbbell bench (both bells) ~80% of barbell bench: more stabilising
+    barbellEquivalence: 0.8,
     defaultSets: 4,
     defaultReps: '8-10',
   },
@@ -181,6 +185,8 @@ export const SEED_EXERCISES: Exercise[] = [
     ],
     isPrimaryAnchorCandidate: true,
     mainLiftCategory: 'BENCH',
+    // Incline dumbbell press ~70% of flat barbell bench
+    barbellEquivalence: 0.7,
     defaultSets: 3,
     defaultReps: '8-10',
   },

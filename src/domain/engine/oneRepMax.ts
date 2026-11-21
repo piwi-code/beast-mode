@@ -5,9 +5,20 @@ export interface MainLiftRecord {
   date: string;
   exerciseId: string;
   exerciseName: string;
+  /** Top set as logged (per dumbbell for two-dumbbell lifts). */
   topWeightKg: number;
   topReps: number;
+  /** 2 for two-dumbbell lifts, so topWeightKg can be shown as "2 × 28 kg". */
+  dumbbells: number;
+  /** e1RM of this lift itself, from the total load moved. */
   estimated1RM: number;
+  /**
+   * e1RM converted to the category's barbell lift (estimated1RM divided by
+   * the exercise's barbellEquivalence), so variations share one chart.
+   */
+  barbellEquivalent1RM: number;
+  /** True when barbellEquivalent1RM was converted from a variation. */
+  isConverted: boolean;
   totalVolumeKg: number;
 }
 
@@ -37,14 +48,17 @@ export function extractMainLiftHistory(
     );
     if (validSets.length === 0) continue;
 
-    let bestSet = validSets[0];
-    let best1RM = estimateOneRepMax(bestSet.weightKg, bestSet.reps);
-    let totalVolumeKg = 0;
+    const ex = exMap.get(session.primaryLiftId);
+    const dumbbells = ex?.dumbbellsUsed ?? 1;
+    const equivalence = ex?.barbellEquivalence ?? 1;
 
+    // Best set by e1RM, always from the total load (both dumbbells)
+    let bestSet = validSets[0];
+    let best1RM = 0;
+    let totalVolumeKg = 0;
     for (const s of validSets) {
-      totalVolumeKg +=
-        s.weightKg * (exMap.get(session.primaryLiftId)?.dumbbellsUsed ?? 1) * s.reps;
-      const e1rm = estimateOneRepMax(s.weightKg, s.reps);
+      totalVolumeKg += s.weightKg * dumbbells * s.reps;
+      const e1rm = estimateOneRepMax(s.weightKg * dumbbells, s.reps);
       if (e1rm > best1RM) {
         best1RM = e1rm;
         bestSet = s;
@@ -55,10 +69,13 @@ export function extractMainLiftHistory(
       sessionId: session.id,
       date: session.date,
       exerciseId: session.primaryLiftId,
-      exerciseName: exMap.get(session.primaryLiftId)?.name ?? session.primaryLiftId,
+      exerciseName: ex?.name ?? session.primaryLiftId,
       topWeightKg: bestSet.weightKg,
       topReps: bestSet.reps,
+      dumbbells,
       estimated1RM: best1RM,
+      barbellEquivalent1RM: Math.round((best1RM / equivalence) * 10) / 10,
+      isConverted: equivalence !== 1,
       totalVolumeKg,
     });
   }

@@ -134,6 +134,14 @@ The application executes dynamic validation checks in real time as exercises, su
 
 ---
 
+## 3c. Main Lift 1RM Charts (`src/domain/engine/oneRepMax.ts`)
+
+- Estimated 1RM uses Epley (`weight × (1 + reps / 30)`) on the **total** load: two-dumbbell lifts count both dumbbells.
+- Variations share a chart with their barbell lift by converting to a barbell equivalent with `Exercise.barbellEquivalence` (roughly what fraction of the barbell 1RM the variation reaches): Dumbbell Bench ≈ 80% (extra stabilising), Incline Dumbbell Press ≈ 70%, RDL ≈ 75% of the deadlift. Converted sessions are shown as faded bars marked ≈; the lift's own e1RM is in the bar's tooltip.
+- These ratios are rules of thumb and differ between people; they only make the trend line comparable.
+
+---
+
 ## 4. Sled Finisher Dosing Protocol
 
 For lower body sessions, the turf sled module follows a standardized protocol:

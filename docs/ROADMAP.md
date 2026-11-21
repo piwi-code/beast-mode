@@ -49,6 +49,7 @@ When the POC phase ends: enable branch protection on `main` (require PR + passin
 - [x] Starting weights: Settings entry for main lifts and ratio-based predictions for related exercises; set/round/session timestamps recorded; sample sessions no longer seeded (leftovers removed)
 - [x] Real gym weight steps: kg dumbbell ladder (1 kg to 10 kg, then 2 kg), 5 lb pin-stack steps stored in kg with lb hints, 2.5 kg plates, 5 kg fixed bars
 - [x] Prone Leg Curl added (logged separately from the seated curl); calf raise machines marked plate-loaded
+- [x] 1RM charts: dumbbell lifts use both dumbbells; dumbbell bench / incline / RDL converted to barbell terms (faded ≈ bars); chart bars now render
 - [ ] Built-in auto-starting rest timer (60–90s for supersets/sleds, 2–3m for heavy primary anchors) with Web Audio/Vibration alerts
 - [ ] Shareable Workout Template URLs (encode a planned session into a URL query string so you can text a link to your gym buddy)
 - [ ] Custom Exercise & Custom Superset creator in the UI

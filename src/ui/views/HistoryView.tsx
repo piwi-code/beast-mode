@@ -117,10 +117,12 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
 
         <div className="grid gap-4 md:grid-cols-3">
           {bigThreeCards.map((card) => {
+            // Charted in barbell terms so dumbbell / RDL sessions compare fairly
             const best1RM = card.records.reduce(
-              (m, r) => (r.estimated1RM > m ? r.estimated1RM : m),
+              (m, r) => (r.barbellEquivalent1RM > m ? r.barbellEquivalent1RM : m),
               0
             );
+            const hasConverted = card.records.some((r) => r.isConverted);
             const latest = card.records[card.records.length - 1];
 
             return (
@@ -139,7 +141,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                   </div>
                   <div className="text-right">
                     <div className="text-[10px] uppercase text-zinc-400">
-                      Best e1RM
+                      Best e1RM{hasConverted ? ' (barbell)' : ''}
                     </div>
                     <div className="text-base font-extrabold text-white">
                       {best1RM > 0 ? `${best1RM} kg` : '—'}
@@ -160,26 +162,33 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                           best1RM > 0
                             ? Math.max(
                                 25,
-                                Math.round((r.estimated1RM / best1RM) * 100)
+                                Math.round((r.barbellEquivalent1RM / best1RM) * 100)
                               )
                             : 50;
                         return (
                           <button
                             key={r.sessionId}
                             onClick={() => setSelectedSessionId(r.sessionId)}
-                            className="flex-1 flex flex-col items-center gap-1 group"
-                            title={`${new Date(
-                              r.date
-                            ).toLocaleDateString()}: ${r.topWeightKg}kg × ${
+                            className="flex h-full flex-1 flex-col items-center justify-end gap-1 group"
+                            title={`${new Date(r.date).toLocaleDateString()}: ${
+                              r.exerciseName
+                            } ${r.dumbbells > 1 ? `${r.dumbbells} × ` : ''}${r.topWeightKg} kg × ${
                               r.topReps
-                            } (e1RM ${r.estimated1RM}kg)`}
+                            } (e1RM ${r.estimated1RM} kg${
+                              r.isConverted ? `, ≈${r.barbellEquivalent1RM} kg barbell` : ''
+                            })`}
                           >
                             <span className="text-[9px] text-zinc-400 group-hover:text-white font-semibold">
-                              {r.estimated1RM}
+                              {r.isConverted ? '≈' : ''}
+                              {Math.round(r.barbellEquivalent1RM)}
                             </span>
                             <div
-                              className={`w-full rounded-t ${card.bar} opacity-85 group-hover:opacity-100 transition-all`}
-                              style={{ height: `${heightPct}%` }}
+                              className={`w-full rounded-t ${card.bar} ${
+                                r.isConverted
+                                  ? 'opacity-40 group-hover:opacity-70'
+                                  : 'opacity-85 group-hover:opacity-100'
+                              } transition-all`}
+                              style={{ height: `calc(${heightPct}% - 14px)` }}
                             />
                           </button>
                         );
@@ -189,7 +198,17 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                     {latest && (
                       <div className="flex items-center justify-between text-[11px] text-zinc-400">
                         <span>
-                          Latest: <strong className="text-zinc-200">{latest.topWeightKg}kg × {latest.topReps}</strong>
+                          Latest:{' '}
+                          <strong className="text-zinc-200">
+                            {latest.dumbbells > 1 ? `${latest.dumbbells} × ` : ''}
+                            {latest.topWeightKg} kg × {latest.topReps}
+                          </strong>
+                          {latest.isConverted && (
+                            <span className="text-zinc-500">
+                              {' '}
+                              ({exerciseMap.get(latest.exerciseId)?.shortName ?? latest.exerciseName})
+                            </span>
+                          )}
                         </span>
                         <span>
                           {new Date(latest.date).toLocaleDateString(undefined, {
@@ -198,6 +217,18 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                           })}
                         </span>
                       </div>
+                    )}
+                    {hasConverted && (
+                      <p className="text-[10px] leading-snug text-zinc-500">
+                        Faded bars (≈) are variations shown in barbell terms:{' '}
+                        {[...new Set(card.records.filter((r) => r.isConverted).map((r) => r.exerciseId))]
+                          .map((id) => {
+                            const ex = exerciseMap.get(id);
+                            return `${ex?.shortName ?? id} ≈ ${Math.round((ex?.barbellEquivalence ?? 1) * 100)}%`;
+                          })
+                          .join(', ')}{' '}
+                        of the barbell lift.
+                      </p>
                     )}
                   </div>
                 )}

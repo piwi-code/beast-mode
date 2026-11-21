@@ -56,6 +56,12 @@ export interface Exercise {
   defaultReps?: string;
   mainLiftCategory?: 'BENCH' | 'SQUAT' | 'DEADLIFT' | 'OTHER';
   /**
+   * For variations in a main-lift category: roughly what fraction of the
+   * barbell lift's 1RM this lift reaches (total load). Used to put e.g.
+   * dumbbell bench on the same chart as barbell bench. Defaults to 1.
+   */
+  barbellEquivalence?: number;
+  /**
    * Set to 2 when two dumbbells are used at once (e.g. dumbbell bench).
    * Weights are always logged per dumbbell; totals multiply by this.
    */

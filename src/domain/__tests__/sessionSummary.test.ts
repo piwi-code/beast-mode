@@ -85,3 +85,33 @@ describe('paired dumbbell weights', () => {
     expect(summary.totalVolumeKg).toBe(30 * 2 * 10);
   });
 });
+
+describe('main lift 1RM history', () => {
+  it('uses both dumbbells and converts variations to barbell terms', async () => {
+    const { extractCategoryLiftHistory } = await import('../engine/oneRepMax');
+    const done = (id: string, primaryLiftId: string, weightKg: number, reps: number, date: string): WorkoutSession => ({
+      id,
+      date,
+      status: 'COMPLETED',
+      splitType: 'UPPER',
+      primaryLiftId,
+      primaryLiftSets: [{ setNumber: 1, weightKg, reps, completed: true }],
+      supersets: [],
+      finishers: [],
+      totalAxialLoad: 0,
+    });
+    const recs = extractCategoryLiftHistory(
+      [
+        done('a', 'bb_flat_bench', 80, 6, '2026-11-01T09:00:00Z'),
+        done('b', 'db_flat_bench', 28, 8, '2026-11-05T09:00:00Z'),
+      ],
+      'BENCH',
+      SEED_EXERCISES
+    );
+    const [bb, db] = recs;
+    expect(bb).toMatchObject({ estimated1RM: 96, barbellEquivalent1RM: 96, isConverted: false, dumbbells: 1 });
+    // 2 x 28 = 56 kg x 8 -> e1RM 70.9; / 0.8 -> 88.6 barbell-equivalent
+    expect(db).toMatchObject({ topWeightKg: 28, dumbbells: 2, estimated1RM: 70.9, isConverted: true });
+    expect(db.barbellEquivalent1RM).toBe(88.6);
+  });
+});
