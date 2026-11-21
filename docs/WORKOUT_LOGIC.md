@@ -116,7 +116,7 @@ The application executes dynamic validation checks in real time as exercises, su
 - **Real gym weights** (`src/domain/engine/increments.ts`): everything is stored and shown in kg, but only weights that exist on the kit are suggested, and the +/- buttons step between them:
   - **Dumbbells** (kg): 1 kg steps up to 10 kg, then 2 kg steps (12, 14, 16 ...).
   - **Cable stacks**: 5 lb add-on steps (major plate 10 lb). **Other pin-stack machines**: 5 lb add-on steps (major plate 15 lb). Converted to kg (50 lb = 22.7 kg) with the lb pin shown alongside so it can be found on the stack.
-  - **Plate-loaded barbells, Leg Press, sled**: 2.5 kg steps. **Fixed barbells**: 5 kg steps.
+  - **Plate-loaded barbells, Leg Press, standing and seated calf raise machines, sled**: 2.5 kg steps. **Fixed barbells**: 5 kg steps.
   - Per-exercise override: `Exercise.loadProfile` (`plates`, `fixed-bar`, `dumbbell`, `cable-stack`, `machine-stack`); otherwise chosen from the equipment type. Weights logged before these rules are snapped to the nearest real setting when suggested again. Typed-in weights are kept as entered.
 
 - **Last recorded first**: when an exercise is added to a session (new session, new superset, exercise swap, split switch), its sets start from the weights and reps logged the last time that exercise was completed, whether as a primary lift or in a superset. Finishers reuse their last finisher load.

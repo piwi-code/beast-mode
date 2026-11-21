@@ -27,6 +27,9 @@ describe('kit profiles', () => {
     expect(profile('leg_press_machine')).toEqual({ kind: 'linear', stepKg: 2.5 });
     expect(profile('bb_flat_bench')).toEqual({ kind: 'linear', stepKg: 2.5 });
     expect(profile('bb_curl_drop_set')).toEqual({ kind: 'linear', stepKg: 5 });
+    expect(profile('machine_calf_raise_standing')).toEqual({ kind: 'linear', stepKg: 2.5 });
+    expect(profile('seated_calf_raise_machine')).toEqual({ kind: 'linear', stepKg: 2.5 });
+    expect(profile('prone_leg_curl')).toEqual({ kind: 'stack', minorLb: 5, majorLb: 15 });
   });
 });
 

@@ -236,7 +236,7 @@ export const SEED_EXERCISES: Exercise[] = [
   {
     id: 'seated_hamstring_curl',
     name: 'Seated Machine Hamstring Curl',
-    shortName: 'Hamstring Curl',
+    shortName: 'Seated Leg Curl',
     summary: 'Seated machine: curl the pad down by bending your knees.',
     pattern: 'ISOLATION',
     primaryMuscles: ['HAMSTRINGS'],
@@ -256,6 +256,30 @@ export const SEED_EXERCISES: Exercise[] = [
     defaultReps: '10-12',
   },
   {
+    id: 'prone_leg_curl',
+    name: 'Prone (Lying) Machine Leg Curl',
+    shortName: 'Prone Leg Curl',
+    summary: 'Lying face-down on the machine, curl the pad up toward your glutes.',
+    pattern: 'ISOLATION',
+    primaryMuscles: ['HAMSTRINGS'],
+    secondaryMuscles: ['CALVES'],
+    equipment: 'MACHINE',
+    axialLoadScore: 0,
+    gripTax: 0,
+    jointStressLevel: 1,
+    runnerBenefitNote:
+      'Trains the hamstrings with the hip straight, the way they work in the late swing phase of each stride.',
+    executionDirections:
+      'Lie face-down with knees just off the pad edge and the roller above your heels. Press your hips into the bench, curl the pad toward your glutes, pause, and lower over 2–3 seconds.',
+    formTips: [
+      'Keep hips pinned to the pad: if they lift, the weight is too heavy',
+      'Feels harder than the seated version at the same weight: hamstrings start less stretched',
+      'Logged separately from the seated curl, since the two machines load differently',
+    ],
+    defaultSets: 3,
+    defaultReps: '10-12',
+  },
+  {
     id: 'machine_calf_raise_standing',
     name: 'Standing Deficit Machine Calf Raise',
     shortName: 'Calf Raise',
@@ -264,6 +288,8 @@ export const SEED_EXERCISES: Exercise[] = [
     primaryMuscles: ['CALVES'],
     secondaryMuscles: [],
     equipment: 'MACHINE',
+    // Plate-loaded at this gym, not a pin stack
+    loadProfile: 'plates',
     axialLoadScore: 1,
     gripTax: 0,
     jointStressLevel: 1,
@@ -842,6 +868,8 @@ export const SEED_EXERCISES: Exercise[] = [
     primaryMuscles: ['CALVES'],
     secondaryMuscles: [],
     equipment: 'MACHINE',
+    // Plate-loaded at this gym, not a pin stack
+    loadProfile: 'plates',
     axialLoadScore: 0,
     gripTax: 0,
     jointStressLevel: 1,

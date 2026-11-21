@@ -161,6 +161,8 @@ export const LIFT_RATIOS: Array<{ a: string; b: string; ratio: number }> = [
   { a: 'ez_bar_curl', b: 'seated_isolated_curl', ratio: 0.35 },
   { a: 'lat_pulldown_neutral', b: 'cable_seated_row', ratio: 1 },
   { a: 'machine_calf_raise_standing', b: 'seated_calf_raise_machine', ratio: 0.5 },
+  // Prone starts the hamstrings less stretched, so slightly less weight
+  { a: 'seated_hamstring_curl', b: 'prone_leg_curl', ratio: 0.85 },
 ];
 
 /** A weight we trust for an exercise: last logged top set, else the user's starting weight. */
